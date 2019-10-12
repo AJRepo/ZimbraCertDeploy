@@ -79,6 +79,7 @@ fi
 
 if [[ -f "$X3_FILE" && -f "$Z_BASE_DIR/opt/zimbra/ssl/letsencrypt/chain.pem" ]]; then
   cat $X3_FILE >> $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+  chown zimbra:zimbra /opt/zimbra/ssl/letsencrypt/*
 else
   echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
