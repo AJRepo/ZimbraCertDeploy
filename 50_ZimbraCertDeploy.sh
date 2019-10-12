@@ -77,9 +77,9 @@ else
   chown zimbra:zimbra $X3_FILE
 fi
 
-if [[ -f "$X3_FILE" && -f "$Z_BASE_DIR/opt/zimbra/ssl/letsencrypt/chain.pem" ]]; then
+if [[ -f "$X3_FILE" && -f "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" ]]; then
   cat $X3_FILE >> $Z_BASE_DIR/ssl/letsencrypt/chain.pem
-  chown zimbra:zimbra /opt/zimbra/ssl/letsencrypt/*
+  chown zimbra:zimbra $Z_BASE_DIR/ssl/letsencrypt/*
 else
   echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
@@ -88,5 +88,35 @@ From: <$FROM>
   cat $MESSAGE_FILE | $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL"
   exit 1
 fi
+
+cd $Z_BASE_DIR/ssl/letsencrypt/
+if [[ $(sudo -u zimbra $Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem) -ne 0 ]]; then
+  #echo "Certcheck failed with zimbra"
+  echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
+
+  Check of certificate failed. stopping" > $MESSAGE_FILE
+  cat $MESSAGE_FILE | $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL"
+  exit 1
+fi
+
+
+#Deply and Restart
+sudo -u zimbra -g zimbra zmproxyctl stop && sudo -u zimbra zmmailboxdctl stop
+
+#backup zimbra certs
+cp -r $Z_BASE_DIR/ssl/zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
+chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
+
+#Is $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key a softlink to privkey.pem?
+#cp letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key
+cd $Z_BASE_DIR/ssl/letsencrypt/
+sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+
+#have to wait 60 seconds or so for zimlet to restart so best to do this at night
+sudo -u zimbra -g zimbra zmcontrol restart
+sudo -u zimbra -g zimbra zmproxyctl reload
+
+
 
 cat $MESSAGE_FILE | $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL"
