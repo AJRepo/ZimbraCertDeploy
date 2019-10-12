@@ -18,28 +18,44 @@ TODAY=$(date +%Y%m%d)
 #Make Backup Directory
 mkdir -p "/opt/zimbra/ssl/letsencrypt/bak.$TODAY"
 if [[ $(  mkdir -p "/opt/zimbra/ssl/letsencrypt/bak.$TODAY") -ne 0 ]]; then
-  echo "Subject ERROR: Letsencrypt Renewal of Zimbra Cert
-From <$FROM>
+  echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
 
   Unable to make backup directory" > $MESSAGE_FILE
   cat $MESSAGE_FILE | /opt/zimbra/common/sbin/sendmail -t "$EMAIL"
+  exit 1
 fi
 
 #Backup Old Cert
 if [[ $(cp /opt/zimbra/ssl/letsencrypt/*.pem /opt/zimbra/ssl/letsencrypt/bak."$TODAY"/) -ne 0 ]]; then
-  echo "Subject ERROR: Letsencrypt Renewal of Zimbra Cert
-From <$FROM>
+  echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
 
   Unable to backup old Certiricate, stopping" > $MESSAGE_FILE
   cat $MESSAGE_FILE | /opt/zimbra/common/sbin/sendmail -t "$EMAIL"
+  exit 1
 fi
 
 #Copy New Cert
 if [[ $(cp /etc/letsencrypt/live/"$FQHN"/* /opt/zimbra/ssl/letsencrypt/) -ne 0 ]]; then
-  echo "Subject ERROR: Letsencrypt Renewal of Zimbra Cert
-From <$FROM>
+  echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
 
   Unable to copy new Certiricate to /opt/zimbra/ssl/letsencrypt, stopping" > $MESSAGE_FILE
+  cat $MESSAGE_FILE | /opt/zimbra/common/sbin/sendmail -t "$EMAIL"
+  exit 1
+fi
+
+#Chaining Cert
+#https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+#https://letsencrypt.org/certs/letsencryptauthorityx3.pem.txt
+X3CERTURI="https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt"
+#Backup Old Cert
+if [[ $(curl -o /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3CERTURI) -ne 0 ]]; then
+  echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
+
+  Unable to download X3 Cross Signed Cert" > $MESSAGE_FILE
   cat $MESSAGE_FILE | /opt/zimbra/common/sbin/sendmail -t "$EMAIL"
 fi
 
