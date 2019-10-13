@@ -9,6 +9,20 @@ X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
 
 MESSAGE_FILE="/tmp/message.txt"
 
+#TODO: make sleep till reboot time a geopts option
+##Seconds until the next Mail Server Restart time (3am)
+#if [[ $(date +%H) -gt 3 ]]; then
+#  RESTART_TIME=$(date +%s -d "3am tomorrow")
+#else
+#  RESTART_TIME=$(date +%s -d "3am")
+#fi
+#
+#NOW=$(date +%s)
+#SECONDS_TIL_START=$(echo "$RESTART_TIME - $NOW" | bc)
+
+echo "Sleeping for $SECONDS_TIL_START seconds"
+sleep $SECONDS_TIL_START
+
 echo "Subject: Letsencrypt Renewal of Zimbra Cert done
 From: <$FROM>
 
@@ -69,11 +83,11 @@ if [[ -f "$X3_FILE" ]]; then
     echo "Subject: WARNING: X3 cert download differs from previous X3 cert
 From: <$FROM>
 
-    The downloaded X3 Cross Signed Cert differs from what was saved previously. 
+    The downloaded X3 Cross Signed Cert differs from what was saved previously.
     This might be ok if this is the first time you've run this program or if it actually changed
-    but letting you know anyway."
+    but flagging anyway."
 else
-  cp /tmp/lets-encrypt-x3-cross-signed.pem.txt $Z_BASE_DIR/ssl/letsencrypt/ 
+  cp /tmp/lets-encrypt-x3-cross-signed.pem.txt $Z_BASE_DIR/ssl/letsencrypt/
   chown zimbra:zimbra $X3_FILE
 fi
 
@@ -102,22 +116,44 @@ fi
 
 
 #Deply and Restart
-sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmproxyctl stop 
-sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmmailboxdctl stop
+sudo -u zimbra -g zimbra -i bash << EOF
+  $Z_BASE_DIR/bin/zmproxyctl stop
+  $Z_BASE_DIR/bin/zmmailboxdctl stop
+EOF
 
 #backup zimbra certs
 cp -r $Z_BASE_DIR/ssl/zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
 chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
 
 #Is $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key a softlink to privkey.pem?
-#cp letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key
-cd $Z_BASE_DIR/ssl/letsencrypt/
-sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
+  #check that link goes to correct spot
+  COMM_KEY=$(readlink -f $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key)
+  if [[ $COMM_KEY != "$Z_BASE_DIR/ssl/letsencrypt/privkey.pem" ]]; then
+    echo "ERROR: link goes to wrong place, Exiting"
+    exit 1
+  fi
+else
+  if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key) -ne 0 ]]; then
+    echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
+
+    Copy of privkey.pem to commercial.key failed. stopping" > $MESSAGE_FILE
+    cat $MESSAGE_FILE | $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL"
+    exit 1
+  fi
+  chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key
+fi
+
+#Deploy Certificate
+sudo -u zimbra -g zimbra -i bash << EOF
+  $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+EOF
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmcontrol restart
-sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmproxyctl reload
-
-
+sudo -u zimbra -g zimbra -i bash << EOF
+  $Z_BASE_DIR/bin/zmcontrol restart
+  $Z_BASE_DIR/bin/zmproxyctl reload
+EOF
 
 cat $MESSAGE_FILE | $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL"
