@@ -102,7 +102,8 @@ fi
 
 
 #Deply and Restart
-sudo -u zimbra -g zimbra zmproxyctl stop && sudo -u zimbra zmmailboxdctl stop
+sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmproxyctl stop 
+sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmmailboxdctl stop
 
 #backup zimbra certs
 cp -r $Z_BASE_DIR/ssl/zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
@@ -114,8 +115,8 @@ cd $Z_BASE_DIR/ssl/letsencrypt/
 sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-sudo -u zimbra -g zimbra zmcontrol restart
-sudo -u zimbra -g zimbra zmproxyctl reload
+sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmcontrol restart
+sudo -u zimbra -g zimbra $Z_BASE_DIR/bin/zmproxyctl reload
 
 
 
