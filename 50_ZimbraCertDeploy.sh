@@ -21,6 +21,8 @@ MESSAGE_FILE="/tmp/message.txt"
 #NOW=$(date +%s)
 #SECONDS_TIL_START=$(echo "$RESTART_TIME - $NOW" | bc)
 
+SECONDS_TIL_START=0
+
 echo "Sleeping for $SECONDS_TIL_START seconds"
 sleep "$SECONDS_TIL_START"
 
