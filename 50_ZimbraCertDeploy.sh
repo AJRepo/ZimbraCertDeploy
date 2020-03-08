@@ -110,8 +110,12 @@ From: <$FROM>
 fi
 
 cd $Z_BASE_DIR/ssl/letsencrypt/ || exit 1
-if [[ $(sudo -u zimbra $Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem) -ne 0 ]]; then
-  #echo "Certcheck failed with zimbra"
+#Check Certificates Prior to Deploy
+sudo -u zimbra -g zimbra -i bash << EOF
+  $Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+EOF
+if [[ $? -ne 0 ]]; then
+  echo "'zmcertmgr verifycert comm' command failed"
   echo "Subject: ERROR: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
 
@@ -120,21 +124,20 @@ From: <$FROM>
   exit 1
 fi
 
-
 #Deply and Restart
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmproxyctl stop
 EOF
 if [[ $? -ne 0 ]]; then
- echo "'zmproxyctl stop' command failed"
- exit 1
+  echo "'zmproxyctl stop' command failed"
+  exit 1
 fi
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmmailboxdctl stop
 EOF
 if [[ $? -ne 0 ]]; then
- echo "'zmmailboxctl stop' command failed"
- exit 1
+  echo "'zmmailboxctl stop' command failed"
+  exit 1
 fi
 
 #backup zimbra certs
@@ -166,8 +169,8 @@ sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 EOF
 if [[ $? -ne 0 ]]; then
- echo "'certmgr deplycrt comm' command failed"
- exit 1
+  echo "'certmgr deplycrt comm' command failed"
+  exit 1
 fi
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
@@ -175,15 +178,15 @@ sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmcontrol restart
 EOF
 if [[ $? -ne 0 ]]; then
- echo "'zmcontrol restart' command failed"
- exit 1
+  echo "'zmcontrol restart' command failed"
+  exit 1
 fi
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmproxyctl reload
 EOF
 if [[ $? -ne 0 ]]; then
- echo "'zmproxyctl reload' command failed"
- exit 1
+  echo "'zmproxyctl reload' command failed"
+  exit 1
 fi
 
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < $MESSAGE_FILE
