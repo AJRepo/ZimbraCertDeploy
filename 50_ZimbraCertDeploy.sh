@@ -2,8 +2,9 @@
 
 #Warning: hostname -A adds a space to the end of returned value(s)
 FQDN=$(hostname -A | sed -e /\ /s///g)
+DOMAIN=$(hostname -d | sed -e /\ /s///g)
 FROM="<ZimbreMailServer@$FQDN"
-EMAIL="AJREPO@example.com"
+EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
 X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
 
