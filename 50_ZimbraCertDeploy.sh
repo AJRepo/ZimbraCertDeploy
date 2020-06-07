@@ -6,17 +6,19 @@
 #Warning: hostname -A adds a space to the end of returned value(s)
 FQDN=$(hostname -A | sed -e /\ /s///g)
 DOMAIN=$(hostname -d | sed -e /\ /s///g)
-FROM="<ZimbreMailServer@$FQDN"
+FROM="<ZimbraMailServer@$FQDN"
 EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
 X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
 THIS_SCRIPT=${0}
 
-MESSAGE_FILE="/tmp/message.txt"
 
 
 NOW_UNIXTIME=$(date +%s)
 NOW_DATE=$(date)
+
+MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
+
 ##Seconds until the next Mail Server Restart time (3am)
 if [[ $(date +%H) -gt 3 ]]; then
   RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
@@ -161,6 +163,7 @@ EOF
 
 if [[ $? -ne 0 ]]; then
   echo "'zmproxyctl stop' command failed"
+  echo "'zmproxyctl stop' command failed" >> $MESSAGE_FILE
   exit 1
 fi
 sudo -u zimbra -g zimbra -i bash << EOF
@@ -169,6 +172,7 @@ EOF
 
 if [[ $? -ne 0 ]]; then
   echo "'zmmailboxctl stop' command failed"
+  echo "'zmmailboxctl stop' command failed" >> $MESSAGE_FILE
   exit 1
 fi
 
@@ -182,6 +186,7 @@ if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
   COMM_KEY=$(readlink -f $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key)
   if [[ $COMM_KEY != "$Z_BASE_DIR/ssl/letsencrypt/privkey.pem" ]]; then
     echo "ERROR: link goes to wrong place, Exiting"
+    echo "ERROR: link goes to wrong place, Exiting" >> $MESSAGE_FILE
     exit 1
   fi
 else
@@ -203,7 +208,10 @@ EOF
 
 if [[ $? -ne 0 ]]; then
   echo "'certmgr deplycrt comm' command failed"
+  echo "'certmgr deplycrt comm' command failed" >> $MESSAGE_FILE
   exit 1
+else
+  echo "'certmgr deplycrt comm' command success" >> $MESSAGE_FILE
 fi
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
@@ -213,7 +221,10 @@ EOF
 
 if [[ $? -ne 0 ]]; then
   echo "'zmcontrol restart' command failed"
+  echo "'zmcontrol restart' command failed" >> $MESSAGE_FILE
   exit 1
+else
+  echo "'zmcontrol restart' command success" >> $MESSAGE_FILE
 fi
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmproxyctl reload
@@ -221,7 +232,10 @@ EOF
 
 if [[ $? -ne 0 ]]; then
   echo "'zmproxyctl reload' command failed"
+  echo "'zmproxyctl reload' command failed" >> $MESSAGE_FILE
   exit 1
+else
+  echo "'zmproxyctl reload' command success" >> $MESSAGE_FILE
 fi
 
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < $MESSAGE_FILE
