@@ -33,7 +33,7 @@ echo "
 Starting Logfile $THIS_SCRIPT
 Date: $NOW_DATE
 RESTART_DATE: $RESTART_DATE
-This file: $LOG_FILE" >> $LOG_FILE
+This file: $LOG_FILE" >> "$LOG_FILE"
 
 
 #Options on not deploying to mail server immediately on certbot renew execution
@@ -44,7 +44,7 @@ This file: $LOG_FILE" >> $LOG_FILE
 SECONDS_TIL_START=$(echo "$RESTART_UNIXTIME - $NOW_UNIXTIME" | bc)
 SECONDS_TIL_START=0
 
-echo "SECONDS_TIL_START: $SECONS_TIL_START" >> $LOG_FILE
+echo "SECONDS_TIL_START: $SECONDS_TIL_START" >> "$LOG_FILE"
 
 ########SETUP MESSAGE FILE FOR ERRORS######
 echo "Subject: ERRORS: Letsencrypt Renewal of Zimbra Cert
@@ -86,7 +86,7 @@ TODAY=$(date +%Y%m%d)
 #exit
 
 #Make Backup Directory
-echo "Make Backup Directory" >> $LOG_FILE
+echo "Make Backup Directory" >> "$LOG_FILE"
 mkdir -p "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY"
 if [[ $(  mkdir -p "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY") -ne 0 ]]; then
   echo "   Unable to make backup directory" >> "$MESSAGE_FILE.errors"
@@ -97,7 +97,7 @@ chown zimbra:zimbra "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY"
 
 
 #Backup Old Cert
-echo "Backup Old Cert" >> $LOG_FILE
+echo "Backup Old Cert" >> "$LOG_FILE"
 if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/*.pem $Z_BASE_DIR/ssl/letsencrypt/bak."$TODAY"/) -ne 0 ]]; then
   echo "   Unable to backup old Certiricate, stopping" >> "$MESSAGE_FILE.errors"
   $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
@@ -105,7 +105,7 @@ if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/*.pem $Z_BASE_DIR/ssl/letsencrypt/bak."$T
 fi
 
 #Copy New Cert
-echo "Copy New Cert" >> $LOG_FILE
+echo "Copy New Cert" >> "$LOG_FILE"
 if [[ $(cp /etc/letsencrypt/live/"$FQDN"/* $Z_BASE_DIR/ssl/letsencrypt/) -ne 0 ]]; then
   echo "   Unable to copy new Certiricate to $Z_BASE_DIR/ssl/letsencrypt, stopping" >> "$MESSAGE_FILE.errors"
   $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
@@ -119,7 +119,7 @@ fi
 
 X3CERTURI="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
 #X3 Cert chaining
-echo "Cert Chaining" >> $LOG_FILE
+echo "Cert Chaining" >> "$LOG_FILE"
 if [[ $(wget -o /tmp/lets-encrypt-x3-cross-signed.pem.log -O /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3CERTURI) -ne 0 ]]; then
   echo "WARNING: Unable to download X3 Cross Signed Cert" >> "$MESSAGE_FILE.progress"
   echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
@@ -152,7 +152,7 @@ fi
 
 cd $Z_BASE_DIR/ssl/letsencrypt/ || exit 1
 #Check Certificates Prior to Deploy
-echo "Check Certs Prior to Deploy" >> $LOG_FILE
+echo "Check Certs Prior to Deploy" >> "$LOG_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 EOF
@@ -165,7 +165,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 #Deply and Restart
-echo "Check Certs Prior to Deploy" >> $LOG_FILE
+echo "Check Certs Prior to Deploy" >> "$LOG_FILE"
 echo "About to run 'zmproxyctl stop'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmproxyctl stop
@@ -177,7 +177,7 @@ if [[ $? -ne 0 ]]; then
   exit 1
 fi
 
-echo "About to run 'zmmailboxctl stop'" >> $LOG_FILE
+echo "About to run 'zmmailboxctl stop'" >> "$LOG_FILE"
 echo "About to run 'zmmailboxctl stop'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmmailboxdctl stop
@@ -190,7 +190,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 #backup zimbra certs
-echo "About backup Zimbra Certs" >> $LOG_FILE
+echo "About backup Zimbra Certs" >> "$LOG_FILE"
 cp -r $Z_BASE_DIR/ssl/zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
 chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
 
@@ -214,7 +214,7 @@ else
 fi
 
 #Deploy Certificate
-echo "About to Deploy 'zmcertmgr deploycrt comm ...'" >> $LOG_FILE
+echo "About to Deploy 'zmcertmgr deploycrt comm ...'" >> "$LOG_FILE"
 echo "About to Deploy 'zmcertmgr deploycrt comm ...'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
@@ -230,12 +230,12 @@ else
 fi
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-echo "About to restart 'zmcontrol restart'" >> $LOG_FILE
+echo "About to restart 'zmcontrol restart'" >> "$LOG_FILE"
 echo "About to restart 'zmcontrol restart'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmcontrol restart
 EOF
-echo "Restart Complete 'zmcontrol restart'" >> $LOG_FILE
+echo "Restart Complete 'zmcontrol restart'" >> "$LOG_FILE"
 
 if [[ $? -ne 0 ]]; then
   echo "'zmcontrol restart' command failed"
@@ -246,7 +246,7 @@ else
   echo "'zmcontrol restart' command success" >> "$MESSAGE_FILE.progress"
 fi
 
-echo "About to restart proxy 'zmproxyctl reload'" >> $LOG_FILE
+echo "About to restart proxy 'zmproxyctl reload'" >> "$LOG_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
   $Z_BASE_DIR/bin/zmproxyctl reload
 EOF
@@ -260,5 +260,5 @@ else
   echo "'zmproxyctl reload' command success" >> "$MESSAGE_FILE.progress"
 fi
 
-echo "All done. About to send message of completion" >> $LOG_FILE
+echo "All done. About to send message of completion" >> "$LOG_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.progress"
