@@ -10,7 +10,7 @@ FROM="<ZimbraMailServer@$FQDN"
 EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
 X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
-THIS_SCRIPT=${0}
+THIS_SCRIPT=$(basename ${0})
 
 
 NOW_UNIXTIME=$(date +%s)
