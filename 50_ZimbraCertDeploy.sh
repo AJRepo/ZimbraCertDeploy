@@ -23,12 +23,17 @@ MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 if [[ $(date +%k) -gt 3 ]]; then
 	RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
 	RESTART_DATE=$(date -d "3am tomorrow")
+  DAY_TEXT="Tomorrow"
 else
 	RESTART_UNIXTIME=$(date +%s -d "3am")
 	RESTART_DATE=$(date -d "3am")
+  DAY_TEXT="Today"
 fi
 
-echo "
+echo "Subject: Logfile: Letsencrypt Renewal of Zimbra Cert
+From: <$FROM>
+
+
 Starting Logfile $THIS_SCRIPT
 Date: $NOW_DATE
 RESTART_DATE: $RESTART_DATE
@@ -41,7 +46,9 @@ This file: $LOG_FILE" >> "$LOG_FILE"
 ## Option 3: Create systemd monitor which watches both letsencrypt and Zimbra cert dirs
 
 SECONDS_TIL_START=$(echo "$RESTART_UNIXTIME - $NOW_UNIXTIME" | bc)
-SECONDS_TIL_START=0
+if [[ $SECONDS_TIL_START == "" || $SECOND_TIL_START -le 0 ]]; then
+  SECONDS_TIL_START=10
+fi
 
 echo "SECONDS_TIL_START: $SECONDS_TIL_START" >> "$LOG_FILE"
 
@@ -69,7 +76,7 @@ not yet deployed to the Zimbra mail service.
 Current Unixtime: $NOW_UNIXTIME ($NOW_DATE)
 
 If a restart time was set in the script then this script would sleep until 
-Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE)
+Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE $DAY_TEXT) 
 
 Now sleeping for $SECONDS_TIL_START seconds before continuing this script which 
 will deploy the certbot certificate to Zimbra and restart the server. 
