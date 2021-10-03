@@ -11,7 +11,7 @@ EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
 #X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
 X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
-THIS_SCRIPT=$(basename ${0})
+THIS_SCRIPT=$(basename "${0}")
 
 
 NOW_UNIXTIME=$(date +%s)
@@ -47,7 +47,7 @@ This file: $LOG_FILE" >> "$LOG_FILE"
 ## Option 3: Create systemd monitor which watches both letsencrypt and Zimbra cert dirs
 
 SECONDS_TIL_START=$(echo "$RESTART_UNIXTIME - $NOW_UNIXTIME" | bc)
-if [[ $SECONDS_TIL_START == "" || $SECOND_TIL_START -le 0 ]]; then
+if [[ $SECONDS_TIL_START == "" || $SECONDS_TIL_START -le 0 ]]; then
   SECONDS_TIL_START=10
 fi
 
@@ -60,7 +60,7 @@ From: <$FROM>
 Zimbra Error Messages: " > "$MESSAGE_FILE.errors"
 ######################################
 
-if ! touch $LOG_FILE; then
+if ! touch "$LOG_FILE"; then
 	echo "Error: Cannot create $LOG_FILE" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
 	exit
