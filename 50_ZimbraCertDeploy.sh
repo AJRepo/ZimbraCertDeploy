@@ -9,7 +9,8 @@ DOMAIN=$(hostname -d | sed -e /\ /s///g)
 FROM="<ZimbraMailServer@$FQDN"
 EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
-X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
+#X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
+X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename ${0})
 
 
@@ -136,38 +137,75 @@ fi
 #https://letsencrypt.org/certs/letsencryptauthorityx3.pem.txt
 #https://letsencrypt.org/certs/trustid-x3-root.pem.txt
 
-X3CERTURI="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
-#X3 Cert chaining
-echo "Cert Chaining" >> "$LOG_FILE"
-if [[ $(wget -o /tmp/lets-encrypt-x3-cross-signed.pem.log -O /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3CERTURI) -ne 0 ]]; then
-	echo "WARNING: Unable to download X3 Cross Signed Cert" >> "$MESSAGE_FILE.progress"
+#X1 Cert Chaining
+X1CERTURI="https://letsencrypt.org/certs/isrgrootx1.pem.txt"
+echo "X1 Cert Chaining" >> "$LOG_FILE"
+if [[ $(wget -o /tmp/ISRG-X1.pem.log -O /tmp/ISRG-X1.pem $X1CERTURI) -ne 0 ]]; then
+	echo "WARNING: Unable to download X1 Cross Signed Cert" >> "$MESSAGE_FILE.progress"
 	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
 
-	Unable to download X3 Cross Signed Cert" > "$MESSAGE_FILE.warning"
+	Unable to download X1 Cross Signed Cert" > "$MESSAGE_FILE.warning"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.warning"
 fi
 
-if [[ -f "$X3_FILE" ]]; then
-	#compare to see if X3 Cert changed
-	if [[ $(diff /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3_FILE) -ne 0 ]]; then
-		echo "WARNING: The downloaded X3 Cross Signed Cert differs from what was saved previously.
+if [[ -f "$X1_FILE" ]]; then
+	#compare to see if X1 Cert changed
+	if [[ $(diff /tmp/ISRG-X1.pem $X1_FILE) -ne 0 ]]; then
+		echo "WARNING: The downloaded X1 Cross Signed Cert differs from what was saved previously.
 		This might be ok if this is the first time you've run this program or if it actually changed
 		but flagging anyway." >> "$MESSAGE_FILE.progress"
 	fi
 else
-	cp /tmp/lets-encrypt-x3-cross-signed.pem.txt $Z_BASE_DIR/ssl/letsencrypt/
-	chown zimbra:zimbra $X3_FILE
+	cp /tmp/ISRG-X1.pem $Z_BASE_DIR/ssl/letsencrypt/
+	chown zimbra:zimbra $X1_FILE
 fi
 
-if [[ -f "$X3_FILE" && -f "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" ]]; then
-	cat $X3_FILE >> $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+if [[ -f "$X1_FILE" && -f "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" ]]; then
+  #put $X1_FILE first in chain.pem
+  cat "$X1_FILE" "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" > /tmp/certtmp.pem
+	mv /tmp/certtmp.pem "$Z_BASE_DIR/ssl/letsencrypt/chain.pem"
 	chown zimbra:zimbra $Z_BASE_DIR/ssl/letsencrypt/*
 else
-	echo " $X3_FILE or chain.pem file missing. stopping" >> "$MESSAGE_FILE.errors"
+	echo " $X1_FILE or chain.pem file missing. stopping" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
 	exit 1
 fi
+
+################Note X3 Expires 2021-09-30
+#X3CERTURI="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
+##X3 Cert chaining
+#echo "X3 Cert Chaining" >> "$LOG_FILE"
+#if [[ $(wget -o /tmp/lets-encrypt-x3-cross-signed.pem.log -O /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3CERTURI) -ne 0 ]]; then
+#	echo "WARNING: Unable to download X3 Cross Signed Cert" >> "$MESSAGE_FILE.progress"
+#	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
+#From: <$FROM>
+#
+#	Unable to download X3 Cross Signed Cert" > "$MESSAGE_FILE.warning"
+#	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.warning"
+#fi
+#
+#if [[ -f "$X3_FILE" ]]; then
+#	#compare to see if X3 Cert changed
+#	if [[ $(diff /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3_FILE) -ne 0 ]]; then
+#		echo "WARNING: The downloaded X3 Cross Signed Cert differs from what was saved previously.
+#		This might be ok if this is the first time you've run this program or if it actually changed
+#		but flagging anyway." >> "$MESSAGE_FILE.progress"
+#	fi
+#else
+#	cp /tmp/lets-encrypt-x3-cross-signed.pem.txt $Z_BASE_DIR/ssl/letsencrypt/
+#	chown zimbra:zimbra $X3_FILE
+#fi
+#
+#if [[ -f "$X3_FILE" && -f "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" ]]; then
+#	cat $X3_FILE >> $Z_BASE_DIR/ssl/letsencrypt/chain.pem
+#	chown zimbra:zimbra $Z_BASE_DIR/ssl/letsencrypt/*
+#else
+#	echo " $X3_FILE or chain.pem file missing. stopping" >> "$MESSAGE_FILE.errors"
+#	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
+#	exit 1
+#fi
+##############X3 Expires#######################
 
 cd $Z_BASE_DIR/ssl/letsencrypt/ || exit 1
 #Check Certificates Prior to Deploy
