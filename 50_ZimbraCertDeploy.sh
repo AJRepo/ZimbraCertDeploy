@@ -234,15 +234,15 @@ if [[ $? -ne 0 ]]; then
 	exit 1
 fi
 
-echo "About to run 'zmmailboxctl stop'" >> "$LOG_FILE"
-echo "About to run 'zmmailboxctl stop'" >> "$MESSAGE_FILE.progress"
+echo "About to run 'zmmailboxdctl stop'" >> "$LOG_FILE"
+echo "About to run 'zmmailboxdctl stop'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmmailboxdctl stop
 EOF
 
 if [[ $? -ne 0 ]]; then
-	echo "'zmmailboxctl stop' command failed"
-	echo "'zmmailboxctl stop' command failed" >> "$MESSAGE_FILE.progress"
+	echo "'zmmailboxdctl stop' command failed"
+	echo "'zmmailboxdctl stop' command failed" >> "$MESSAGE_FILE.progress"
 	exit 1
 fi
 
