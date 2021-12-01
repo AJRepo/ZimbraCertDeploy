@@ -17,6 +17,8 @@ THIS_SCRIPT=$(basename "${0}")
 NOW_UNIXTIME=$(date +%s)
 NOW_DATE=$(date)
 
+#Note: Since this is called from certbot, the actual location of the file
+#  will be in /tmp/systemd-private-HASH-certbot.service-ID/tmp/50_ZimbraCertDeploy.sh.UNIXTIME.log
 LOG_FILE="/tmp/$THIS_SCRIPT.$NOW_UNIXTIME.log"
 MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 
