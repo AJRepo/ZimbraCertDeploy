@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Ignore SC2181 - required with sudo 
+# Ignore SC2181 - required with sudo
 # shellcheck disable=SC2181
 
 #Warning: hostname -A adds a space to the end of returned value(s)
@@ -26,11 +26,11 @@ MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 if [[ $(date +%k) -gt 3 ]]; then
 	RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
 	RESTART_DATE=$(date -d "3am tomorrow")
-  DAY_TEXT="Tomorrow"
+	DAY_TEXT="Tomorrow"
 else
 	RESTART_UNIXTIME=$(date +%s -d "3am")
 	RESTART_DATE=$(date -d "3am")
-  DAY_TEXT="Today"
+	DAY_TEXT="Today"
 fi
 
 echo "Subject: Logfile: Letsencrypt Renewal of Zimbra Cert
@@ -45,12 +45,12 @@ This file: $LOG_FILE" >> "$LOG_FILE"
 
 #Options on not deploying to mail server immediately on certbot renew execution
 ## Option 1: Specify restart time (e.g. Have restart time a geopts option)
-## Option 2: Modify letsencrypt cron script 
+## Option 2: Modify letsencrypt cron script
 ## Option 3: Create systemd monitor which watches both letsencrypt and Zimbra cert dirs
 
 SECONDS_TIL_START=$(echo "$RESTART_UNIXTIME - $NOW_UNIXTIME" | bc)
 if [[ $SECONDS_TIL_START == "" || $SECONDS_TIL_START -le 0 ]]; then
-  SECONDS_TIL_START=10
+	SECONDS_TIL_START=10
 fi
 
 echo "SECONDS_TIL_START: $SECONDS_TIL_START" >> "$LOG_FILE"
@@ -74,15 +74,15 @@ echo "Subject: Letsencrypt Renewal of Zimbra Cert starting
 From: <$FROM>
 
 The Zimbra Server's Letsencrypt Certificate has been renewed and downloaded but
-not yet deployed to the Zimbra mail service. 
+not yet deployed to the Zimbra mail service.
 
 Current Unixtime: $NOW_UNIXTIME ($NOW_DATE)
 
-If a restart time was set in the script then this script would sleep until 
-Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE $DAY_TEXT) 
+If a restart time was set in the script then this script would sleep until
+Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE $DAY_TEXT)
 
-Now sleeping for $SECONDS_TIL_START seconds before continuing this script which 
-will deploy the certbot certificate to Zimbra and restart the server. 
+Now sleeping for $SECONDS_TIL_START seconds before continuing this script which
+will deploy the certbot certificate to Zimbra and restart the server.
 
 The file for error messages related to this process will be $MESSAGE_FILE.errors
 
@@ -164,8 +164,8 @@ else
 fi
 
 if [[ -f "$X1_FILE" && -f "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" ]]; then
-  #put $X1_FILE first in chain.pem
-  cat "$X1_FILE" "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" > /tmp/certtmp.pem
+	#put $X1_FILE first in chain.pem
+	cat "$X1_FILE" "$Z_BASE_DIR/ssl/letsencrypt/chain.pem" > /tmp/certtmp.pem
 	mv /tmp/certtmp.pem "$Z_BASE_DIR/ssl/letsencrypt/chain.pem"
 	chown zimbra:zimbra $Z_BASE_DIR/ssl/letsencrypt/*
 else
@@ -288,6 +288,10 @@ else
 	echo "'certmgr deplycrt comm' command success" >> "$MESSAGE_FILE.progress"
 fi
 
+#Now that certificate is deployed restart services
+echo "Emailing progress right before restarting services" >> "$MESSAGE_FILE.progress"
+$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.progress"
+
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
 echo "About to restart 'zmcontrol restart'" >> "$LOG_FILE"
 echo "About to restart 'zmcontrol restart'" >> "$MESSAGE_FILE.progress"
@@ -320,6 +324,33 @@ else
 fi
 
 echo "All done. About to send message of completion" >> "$LOG_FILE"
+echo "All done. About to send message of completion" >> "$MESSAGE_FILE.progress"
+$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.progress"
+
+#Do a final check to make sure all zimbra services are running
+echo "About to test running 'zmcontrol status'" >> "$LOG_FILE"
+echo "About to test running 'zmcontrol status'" >> "$MESSAGE_FILE.progress"
+sudo -u zimbra -g zimbra -i bash << EOF
+	$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped
+EOF
+
+#Did the grep find something "stopped" ?
+if [[ $? -eq 0 ]]; then
+	echo "Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$LOG_FILE"
+	echo "Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$MESSAGE_FILE.progress"
+
+	sudo -u zimbra -g zimbra -i bash <<- EOF
+		$Z_BASE_DIR/bin/zmcontrol restart
+	EOF
+
+	echo "Second Restart Complete 'zmcontrol restart'" >> "$LOG_FILE"
+	echo "Second Restart Complete 'zmcontrol restart'" >> "$MESSAGE_FILE.progress"
+else
+	echo "All Zimbra services are running" >> "$LOG_FILE"
+	echo "All Zimbra services are running" >> "$MESSAGE_FILE.progress"
+fi
+
+#Email progress report
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.progress"
 
 #Note: Must use tabs instead of spaces for heredoc (<<-) to work
