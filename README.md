@@ -16,6 +16,7 @@ Notes:
   * zcs-NETWORK-8.8.15_GA_4007 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4125 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4156 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_4173 UBUNTU18_64
 
 (Above version is reported by User->About on browser)
 
