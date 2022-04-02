@@ -10,7 +10,7 @@ the server).
 
 * Install Zimbra Normally
 
-* Install certbot (e.g. apt install certbot) on the Zimbra server.
+* Install certbot (e.g. `apt install certbot`) on the Zimbra server.
 
 * Install the certbot certificate once manually following https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  but your installation of certbot is better done via "apt install certbot" )
 
