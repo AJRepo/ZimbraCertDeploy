@@ -28,7 +28,7 @@ MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 function restart_zimbra_if_not_running() {
 	local _ret=
 
-  _ret=1
+	_ret=1
 
 	echo "In function restart_zimbra_if_not_running----" >> "$MESSAGE_FILE.progress"
 	echo "--" >> "$MESSAGE_FILE.progress"
@@ -61,7 +61,7 @@ function restart_zimbra_if_not_running() {
 	fi
 	echo "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$MESSAGE_FILE.progress"
 
-  return $_ret
+	return $_ret
 }
 
 ##Seconds until the next Mail Server Restart time (3am)
@@ -278,7 +278,7 @@ if [[ $? -ne 0 ]]; then
 	exit 1
 fi
 
-#Deply and Restart
+#Deploy and Restart
 echo "Check Certs Prior to Deploy" >> "$LOG_FILE"
 echo "About to run 'zmproxyctl stop'" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
@@ -352,30 +352,36 @@ echo "Emailing progress right before restarting services at $NOW_DATE" >> "$MESS
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.progress"
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-echo "About to restart 'zmcontrol restart'" >> "$LOG_FILE"
-echo "About to restart 'zmcontrol restart'" >> "$MESSAGE_FILE.progress"
+echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$MESSAGE_FILE.progress"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmcontrol restart
 EOF
 
 #Do not have any commands between this and zmcontrol restart above
 if [[ $? -ne 0 ]]; then
-	echo "'zmcontrol restart' command failed"
-	echo "'zmcontrol restart' command failed" >> "$MESSAGE_FILE.errors"
+	NOW_DATE=$(date)
+	echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
 	#try again
-	restart_zimbra_if_not_running
-	exit 1
+	if ! restart_zimbra_if_not_running; then
+		NOW_DATE=$(date)
+		echo "'zmcontrol restart' command failed at $NOW_DATE"
+		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors"
+		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
+		exit 1
+	fi
 else
 	NOW_DATE=$(date)
 	echo "'zmcontrol restart' command success at $NOW_DATE" >> "$MESSAGE_FILE.progress"
 fi
 
-echo "Command Complete 'zmcontrol restart'" >> "$LOG_FILE"
-echo "Command Complete 'zmcontrol restart'" >> "$MESSAGE_FILE.progress"
+NOW_DATE=$(date)
+echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$MESSAGE_FILE.progress"
 
-echo "About to restart proxy 'zmproxyctl reload'" >> "$MESSAGE_FILE.progress"
-echo "About to restart proxy 'zmproxyctl reload'" >> "$LOG_FILE"
+echo "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$MESSAGE_FILE.progress"
+echo "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$LOG_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmproxyctl reload
 EOF
