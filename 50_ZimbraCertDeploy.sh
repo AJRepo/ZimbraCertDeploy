@@ -28,6 +28,8 @@ LOG_FILE="$Z_BASE_DIR/log/$THIS_SCRIPT.$NOW_UNIXTIME.log"
 MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 
+touch "$LOG_FILE" || ( echo "Cannot create $LOG_FILE" ; exit 1 )
+
 # Input:  None
 # Output: None
 # Return: 0 on success, non 0 otherwise
@@ -37,11 +39,9 @@ function restart_zimbra_if_not_running() {
 	_ret=1
 
 	echo "In function restart_zimbra_if_not_running----" >> "$PROGRESS_FILE"
-	echo "In function restart_zimbra_if_not_running----" >> "$LOG_FILE"
 	echo "--" >> "$PROGRESS_FILE"
-	echo "--" >> "$LOG_FILE"
 	#Do a final check to make sure all zimbra services are running
-	echo "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
+	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
 	echo "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped >> $LOG_FILE 2>&1
@@ -49,26 +49,22 @@ function restart_zimbra_if_not_running() {
 
 	#Did the grep find something "stopped" ?
 	if [[ $? -eq 0 ]]; then
-		NOW_DATE=$(date)
-		echo "--Some Zimbra services are not running, running 'zmcontrol restart' again at $NOW_DATE" >> "$LOG_FILE"
-		echo "--Some Zimbra services are not running, running 'zmcontrol restart' again at $NOW_DATE" >> "$PROGRESS_FILE"
+		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$LOG_FILE"
+		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$PROGRESS_FILE"
 
 		sudo -u zimbra -g zimbra -i bash <<- EOF
 			$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
 		EOF
 		_ret=$?
 
-		NOW_DATE=$(date)
-		echo "--'zmcontrol restart' at $NOW_DATE executed." >> "$LOG_FILE"
-		echo "--'zmcontrol restart' at $NOW_DATE executed." >> "$PROGRESS_FILE"
+		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$LOG_FILE"
+		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$PROGRESS_FILE"
 	else
-		NOW_DATE=$(date)
-		echo "--All Zimbra services are running at $NOW_DATE" >> "$LOG_FILE"
-		echo "--All Zimbra services are running at $NOW_DATE" >> "$PROGRESS_FILE"
-		echo "--" >> "$PROGRESS_FILE"
+		print_v i "--All Zimbra services are running" >> "$LOG_FILE"
+		print_v i "--All Zimbra services are running" >> "$PROGRESS_FILE"
+		print_v i "--" >> "$PROGRESS_FILE"
 	fi
-	echo "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$LOG_FILE"
-	echo "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$PROGRESS_FILE"
+	print_v i "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$PROGRESS_FILE"
 
 	return $_ret
 }
@@ -83,9 +79,7 @@ function restart_zimbra() {
 
 	_ret=1
 	echo "In function restart_zimbra----" >> "$PROGRESS_FILE"
-	echo "In function restart_zimbra----" >> "$LOG_FILE"
 	echo "--" >> "$PROGRESS_FILE"
-	echo "--" >> "$LOG_FILE"
 
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
@@ -94,23 +88,21 @@ function restart_zimbra() {
 
 	#Do not have any commands between this and zmcontrol restart above
 	if [[ $_ret -ne 0 ]]; then
-		NOW_DATE=$(date)
-		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors" 
-		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$LOG_FILE" 
+		print_v e "'zmcontrol restart' command failed" >> "$MESSAGE_FILE.errors"
+		print_v e "'zmcontrol restart' command failed" >> "$LOG_FILE"
 		#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 		#try again
 		if ! restart_zimbra_if_not_running; then
-			NOW_DATE=$(date)
-			echo "restart_zimbra_if_not_running function failed at $NOW_DATE" >> "$LOG_FILE"
-			echo "restart_zimbra_if_not_running function failed at $NOW_DATE" >> "$MESSAGE_FILE.errors" 2>&1
+			print_v e "'restart_zimbra_if_not_running failed" >> "$LOG_FILE"
+			print_v e "'restart_zimbra_if_not_running failed" >> "$MESSAGE_FILE.errors"
 			#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 			$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 			exit 1
 		fi
 	else
-		NOW_DATE=$(date)
-		echo "'zmcontrol restart' command success at $NOW_DATE" >> "$PROGRESS_FILE"
+		print_v i "'zmcontrol restart' command success" >> "$PROGRESS_FILE"
+		print_v i "'zmcontrol restart' command success" >> "$LOG_FILE"
 	fi
 
 	NOW_DATE=$(date)
@@ -119,6 +111,25 @@ function restart_zimbra() {
 	return $_ret
 }
 
+# Input:  Message
+# Output: Formatted Message String
+# Return: 0 on success, non 0 otherwise
+function print_v() {
+	local level=$1
+ 	THIS_DATE=$(date --iso-8601=seconds)
+
+	case $level in
+		e) # Error
+		echo -e "$THIS_DATE [ERRS] ${*:2}"
+		;;
+		w) # Warning
+		echo -e "$THIS_DATE [WARN] ${*:2}"
+		;;
+		*) # Any other level
+		echo -e "$THIS_DATE [INFO] ${*:2}"
+		;;
+	esac
+}
 ##Seconds until the next Mail Server Restart time (3am)
 if [[ $(date +%k) -gt 3 ]]; then
 	RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
@@ -132,6 +143,7 @@ fi
 
 echo "Subject: Logfile: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
+To: <$EMAIL>
 
 
 Starting Logfile $THIS_SCRIPT
@@ -150,24 +162,25 @@ if [[ $SECONDS_TIL_START == "" || $SECONDS_TIL_START -le 0 ]]; then
 	SECONDS_TIL_START=10
 fi
 
-echo "SECONDS_TIL_START: $SECONDS_TIL_START" >> "$LOG_FILE"
+print_v i "SECONDS_TIL_START: $SECONDS_TIL_START" >> "$LOG_FILE"
 
 ########SETUP MESSAGE FILE FOR ERRORS######
 echo "Subject: ERRORS: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
+To: <$EMAIL>
 
 Zimbra Error Messages: " > "$MESSAGE_FILE.errors"
 ######################################
 
 if ! touch "$LOG_FILE"; then
-	echo "Error: Cannot create $LOG_FILE" >> "$MESSAGE_FILE.errors"
+	print_v e "Error: Cannot create $LOG_FILE" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit
 fi
 ######################################
 
 if ! touch "$PROGRESS_FILE"; then
-	echo "Error: Cannot create $PROGRESS_FILE" >> "$MESSAGE_FILE.errors"
+	print_v e "Error: Cannot create $PROGRESS_FILE" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit
 fi
@@ -201,11 +214,17 @@ If you are using systemd then the above log file will actually be in
 
 The log file for this process will be $LOG_FILE
 
-If you are using systemd then the above log file will actually be in 
-/tmp/systemd-private-HASH-certbot.service-ID/$LOG_FILE
+If you are using systemd then temp files will actually be in 
+/tmp/systemd-private-HASH-certbot.service-ID/
 
 This message generated by $THIS_SCRIPT" > "$MESSAGE_FILE.start"
-$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.start"
+
+if [[ -f "$Z_BASE_DIR/common/sbin/sendmail" ]]; then 
+	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.start"
+else
+	print_v e "Error: Can't find $Z_BASE_DIR/common/sbin/sendmail. Exiting."
+	exit 1
+fi
 #####################################
 sleep "$SECONDS_TIL_START"
 
@@ -226,10 +245,10 @@ TODAY=$(date +%Y%m%d)
 #exit
 
 #Make Backup Directory
-echo "Make Backup Directory" >> "$LOG_FILE"
+print_v i "Make Backup Directory" >> "$LOG_FILE"
 mkdir -p "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY"
 if [[ $(  mkdir -p "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY") -ne 0 ]]; then
-	echo "   Unable to make backup directory" >> "$MESSAGE_FILE.errors"
+	print_v e "   Unable to make backup directory" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit 1
 fi
@@ -237,17 +256,17 @@ chown zimbra:zimbra "$Z_BASE_DIR/ssl/letsencrypt/bak.$TODAY"
 
 
 #Backup Old Cert
-echo "Backup Old Cert" >> "$LOG_FILE"
+print_v i "Backup Old Cert" >> "$LOG_FILE"
 if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/*.pem $Z_BASE_DIR/ssl/letsencrypt/bak."$TODAY"/) -ne 0 ]]; then
-	echo "   Unable to backup old Certiricate, stopping" >> "$MESSAGE_FILE.errors"
+	print_v e "   Unable to backup old Certiricate, stopping" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit 1
 fi
 
 #Copy New Cert
-echo "Copy New Cert" >> "$LOG_FILE"
+print_v i "Copy New Cert" >> "$LOG_FILE"
 if [[ $(cp /etc/letsencrypt/live/"$FQDN"/* $Z_BASE_DIR/ssl/letsencrypt/) -ne 0 ]]; then
-	echo "   Unable to copy new Certiricate to $Z_BASE_DIR/ssl/letsencrypt, stopping" >> "$MESSAGE_FILE.errors"
+	print_v e "   Unable to copy new Certiricate to $Z_BASE_DIR/ssl/letsencrypt, stopping" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit 1
 fi
@@ -259,10 +278,10 @@ fi
 
 #X1 Cert Chaining
 X1CERTURI="https://letsencrypt.org/certs/isrgrootx1.pem.txt"
-echo "X1 Cert Chaining" >> "$LOG_FILE"
+print_v i "X1 Cert Chaining" >> "$LOG_FILE"
 if [[ $(wget -o /tmp/ISRG-X1.pem.log -O /tmp/ISRG-X1.pem $X1CERTURI) -ne 0 ]]; then
-	echo "WARNING: Unable to download X1 Cross Signed Cert" >> "$MESSAGE_FILE.errors"
-	echo "WARNING: Unable to download X1 Cross Signed Cert" >> "$PROGRESS_FILE"
+	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$MESSAGE_FILE.errors"
+	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$PROGRESS_FILE"
 	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
 
@@ -296,7 +315,7 @@ fi
 ################Note X3 Expires 2021-09-30
 #X3CERTURI="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
 ##X3 Cert chaining
-#echo "X3 Cert Chaining" >> "$LOG_FILE"
+#print_v i "X3 Cert Chaining" >> "$LOG_FILE"
 #if [[ $(wget -o /tmp/lets-encrypt-x3-cross-signed.pem.log -O /tmp/lets-encrypt-x3-cross-signed.pem.txt $X3CERTURI) -ne 0 ]]; then
 #	echo "WARNING: Unable to download X3 Cross Signed Cert" >> "$PROGRESS_FILE"
 #	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
@@ -330,7 +349,7 @@ fi
 
 cd $Z_BASE_DIR/ssl/letsencrypt/ || exit 1
 #Check Certificates Prior to Deploy
-echo "Check Certs Prior to Deploy" >> "$LOG_FILE"
+print_v i "Check Certs Prior to Deploy" >> "$LOG_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 EOF
@@ -343,32 +362,34 @@ if [[ $? -ne 0 ]]; then
 fi
 
 #Deploy and Restart
-echo "Check Certs Prior to Deploy" >> "$LOG_FILE"
+print_v i "Check Certs Prior to Deploy" >> "$LOG_FILE"
 echo "About to run 'zmproxyctl stop'" >> "$PROGRESS_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmproxyctl stop
 EOF
 
 if [[ $? -ne 0 ]]; then
-	echo "'zmproxyctl stop' command failed"
-	echo "'zmproxyctl stop' command failed" >> "$PROGRESS_FILE"
+	print_v e "'zmproxyctl stop' command failed"
+	print_v e "'zmproxyctl stop' command failed" >> "$LOG_FILE"
+	print_v e "'zmproxyctl stop' command failed" >> "$PROGRESS_FILE"
 	exit 1
 fi
 
-echo "About to run 'zmmailboxdctl stop'" >> "$LOG_FILE"
-echo "About to run 'zmmailboxdctl stop'" >> "$PROGRESS_FILE"
+print_v i "About to run 'zmmailboxdctl stop'" >> "$LOG_FILE"
+print_v i "About to run 'zmmailboxdctl stop'" >> "$PROGRESS_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmmailboxdctl stop
 EOF
 
 if [[ $? -ne 0 ]]; then
-	echo "'zmmailboxdctl stop' command failed"
-	echo "'zmmailboxdctl stop' command failed" >> "$PROGRESS_FILE"
+	print_v e "'zmmailboxdctl stop' command failed"
+	print_v e "'zmmailboxdctl stop' command failed" >> "$LOG_FILE"
+	print_v e "'zmmailboxdctl stop' command failed" >> "$PROGRESS_FILE"
 	exit 1
 fi
 
 #backup zimbra certs
-echo "About to backup Zimbra Certs" >> "$LOG_FILE"
+print_v i "About to backup Zimbra Certs" >> "$LOG_FILE"
 echo "About to backup Zimbra Certs" >> "$PROGRESS_FILE"
 cp -r $Z_BASE_DIR/ssl/zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
 chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra."$TODAY"
@@ -379,7 +400,7 @@ if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
 	COMM_KEY=$(readlink -f $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key)
 	if [[ $COMM_KEY != "$Z_BASE_DIR/ssl/letsencrypt/privkey.pem" ]]; then
 		echo "ERROR: link goes to wrong place, Exiting"
-		echo "ERROR: link goes to wrong place, Exiting" >> "$MESSAGE_FILE.errors"
+		print_v e "ERROR: link goes to wrong place, Exiting" >> "$MESSAGE_FILE.errors"
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 		exit 1
 	fi
@@ -394,7 +415,7 @@ fi
 
 #Deploy Certificate
 NOW_DATE=$(date)
-echo "About to Deploy 'zmcertmgr deploycrt comm at $NOW_DATE'" >> "$LOG_FILE"
+print_v i "About to Deploy 'zmcertmgr deploycrt comm at $NOW_DATE'" >> "$LOG_FILE"
 echo "About to Deploy 'zmcertmgr deploycrt comm at $NOW_DATE'" >> "$PROGRESS_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
@@ -406,7 +427,7 @@ if [[ $? -ne 0 ]]; then
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 	exit 1
 else
-	echo "'certmgr deploycrt comm' command success" >> "$LOG_FILE"
+	print_v i "'certmgr deploycrt comm' command success" >> "$LOG_FILE"
 	echo "'certmgr deploycrt comm' command success" >> "$PROGRESS_FILE"
 fi
 
@@ -416,16 +437,16 @@ echo "Emailing progress right before restarting services at $NOW_DATE" >> "$PROG
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$PROGRESS_FILE"
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+print_v i "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
 echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
 restart_zimbra
 echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
-echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+print_v i "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
 
 echo "----" >> "$PROGRESS_FILE"
 
 echo "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$PROGRESS_FILE"
-echo "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$LOG_FILE"
+print_v i "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$LOG_FILE"
 sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmproxyctl reload
 EOF
@@ -440,17 +461,17 @@ else
 	echo "'zmproxyctl reload' command success" >> "$PROGRESS_FILE"
 fi
 
-echo "All done. About to send message of completion" >> "$LOG_FILE"
+print_v i "All done. About to send message of completion" >> "$LOG_FILE"
 echo "----" >> "$PROGRESS_FILE"
 echo "All done. About to send message of completion" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$PROGRESS_FILE"
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-echo "About to call 'restart_zimbra' at $NOW_DATE" >> "$LOG_FILE"
-echo "About to call 'restart_zimbra' at $NOW_DATE" >> "$PROGRESS_FILE"
+print_v i "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
 restart_zimbra
-echo "Function 'restart_zimbra' complete at $NOW_DATE" >> "$PROGRESS_FILE"
-echo "Function 'restart_zimbra' complete at $NOW_DATE" >> "$LOG_FILE"
+echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
+print_v i "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
 
 
 echo "----" >> "$PROGRESS_FILE"
