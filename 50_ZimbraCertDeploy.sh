@@ -28,7 +28,7 @@ LOG_FILE="$Z_BASE_DIR/log/$THIS_SCRIPT.$NOW_UNIXTIME.log"
 MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 
-touch "$LOG_FILE" || ( echo "Cannot create $LOG_FILE" ; exit 1 )
+touch "$LOG_FILE" ||  echo "Cannot create $LOG_FILE" ; exit 1 
 
 # Input:  None
 # Output: None
@@ -39,10 +39,12 @@ function restart_zimbra_if_not_running() {
 	_ret=1
 
 	echo "In function restart_zimbra_if_not_running----" >> "$PROGRESS_FILE"
+	echo "In function restart_zimbra_if_not_running----" >> "$LOG_FILE"
 	echo "--" >> "$PROGRESS_FILE"
+	echo "--" >> "$LOG_FILE"
 	#Do a final check to make sure all zimbra services are running
 	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
-	echo "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
+	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped >> $LOG_FILE 2>&1
 	EOF
@@ -78,8 +80,8 @@ function restart_zimbra() {
 	local _ret=
 
 	_ret=1
-	echo "In function restart_zimbra----" >> "$PROGRESS_FILE"
-	echo "--" >> "$PROGRESS_FILE"
+	print_v i "In function restart_zimbra----" >> "$PROGRESS_FILE"
+	print_v i "In function restart_zimbra----" >> "$LOG_FILE"
 
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
@@ -467,11 +469,11 @@ echo "All done. About to send message of completion" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$PROGRESS_FILE"
 
 #have to wait 60 seconds or so for zimlet to restart so best to do this at night
-print_v i "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
-echo "About to restart 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
+print_v i "About to restart 'zmcontrol restart' " >> "$LOG_FILE"
+print_v i "About to restart 'zmcontrol restart' " >> "$PROGRESS_FILE"
 restart_zimbra
-echo "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
-print_v i "Command Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
+print_v i "Command Complete 'zmcontrol restart' " >> "$PROGRESS_FILE"
+print_v i "Command Complete 'zmcontrol restart' " >> "$LOG_FILE"
 
 
 echo "----" >> "$PROGRESS_FILE"
