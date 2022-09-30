@@ -49,6 +49,7 @@ been tested/deployed.
   * zcs-NETWORK-8.8.15_GA_4156 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4173 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4232 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_4272 UBUNTU18_64
 
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
