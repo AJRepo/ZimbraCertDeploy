@@ -18,9 +18,13 @@ THIS_SCRIPT=$(basename "${0}")
 NOW_UNIXTIME=$(date +%s)
 NOW_DATE=$(date)
 
-#Note: If certbot is using systemd.timer (not cron.d) then the actual files will be in 
-#      /tmp/systemd-private-HASH-certbot.service-ID/tmp/50_ZimbraCertDeploy.sh.UNIXTIME.log
-LOG_FILE="/tmp/$THIS_SCRIPT.$NOW_UNIXTIME.log"
+#Note:
+#	If certbot is using systemd.timer (not cron.d) then the actual files will be in 
+#	/tmp/systemd-private-HASH-certbot.service-ID/tmp/50_ZimbraCertDeploy.sh.UNIXTIME.log
+#	Where HASH is the id of the process. This means the /tmp dir for systemd.timer is
+# deleted on script	exit even if the final restart was unsuccessful. 
+#
+LOG_FILE="$Z_BASE_DIR/log/$THIS_SCRIPT.$NOW_UNIXTIME.log"
 MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 
@@ -33,12 +37,14 @@ function restart_zimbra_if_not_running() {
 	_ret=1
 
 	echo "In function restart_zimbra_if_not_running----" >> "$PROGRESS_FILE"
+	echo "In function restart_zimbra_if_not_running----" >> "$LOG_FILE"
 	echo "--" >> "$PROGRESS_FILE"
+	echo "--" >> "$LOG_FILE"
 	#Do a final check to make sure all zimbra services are running
 	echo "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
 	echo "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
 	sudo -u zimbra -g zimbra -i bash <<- EOF
-		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped
+		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped >> $LOG_FILE 2>&1
 	EOF
 
 	#Did the grep find something "stopped" ?
@@ -48,19 +54,20 @@ function restart_zimbra_if_not_running() {
 		echo "--Some Zimbra services are not running, running 'zmcontrol restart' again at $NOW_DATE" >> "$PROGRESS_FILE"
 
 		sudo -u zimbra -g zimbra -i bash <<- EOF
-			$Z_BASE_DIR/bin/zmcontrol restart
+			$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
 		EOF
 		_ret=$?
 
 		NOW_DATE=$(date)
-		echo "--Second Restart Complete 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
-		echo "--Second Restart Complete 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
+		echo "--'zmcontrol restart' at $NOW_DATE executed." >> "$LOG_FILE"
+		echo "--'zmcontrol restart' at $NOW_DATE executed." >> "$PROGRESS_FILE"
 	else
 		NOW_DATE=$(date)
 		echo "--All Zimbra services are running at $NOW_DATE" >> "$LOG_FILE"
 		echo "--All Zimbra services are running at $NOW_DATE" >> "$PROGRESS_FILE"
 		echo "--" >> "$PROGRESS_FILE"
 	fi
+	echo "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$LOG_FILE"
 	echo "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$PROGRESS_FILE"
 
 	return $_ret
@@ -69,29 +76,36 @@ function restart_zimbra_if_not_running() {
 # Input:  None
 # Output: None
 # Return: 0 on success, non 0 otherwise
+# Notes: sendmail won't succeed if Zimbra is not running, systemd tmp is deleted on script exit.
+#		That means you need to keep logs in /opt/zimbra/log to see logs for an unsuccessful renewal.
 function restart_zimbra() {
 	local _ret=
 
 	_ret=1
 	echo "In function restart_zimbra----" >> "$PROGRESS_FILE"
+	echo "In function restart_zimbra----" >> "$LOG_FILE"
 	echo "--" >> "$PROGRESS_FILE"
+	echo "--" >> "$LOG_FILE"
 
 	sudo -u zimbra -g zimbra -i bash <<- EOF
-		$Z_BASE_DIR/bin/zmcontrol restart >> "$PROGRESS_FILE"
+		$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
 	EOF
   _ret=$?
 
 	#Do not have any commands between this and zmcontrol restart above
 	if [[ $_ret -ne 0 ]]; then
 		NOW_DATE=$(date)
-		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors"
-		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
+		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors" 
+		echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$LOG_FILE" 
+		#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
+		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 		#try again
 		if ! restart_zimbra_if_not_running; then
 			NOW_DATE=$(date)
-			echo "'zmcontrol restart' command failed at $NOW_DATE"
-			echo "'zmcontrol restart' command failed at $NOW_DATE" >> "$MESSAGE_FILE.errors"
-			$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors"
+			echo "restart_zimbra_if_not_running function failed at $NOW_DATE" >> "$LOG_FILE"
+			echo "restart_zimbra_if_not_running function failed at $NOW_DATE" >> "$MESSAGE_FILE.errors" 2>&1
+			#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
+			$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$MESSAGE_FILE.errors"
 			exit 1
 		fi
 	else
