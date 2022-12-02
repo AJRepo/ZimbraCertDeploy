@@ -13,6 +13,8 @@ Z_BASE_DIR="/opt/zimbra"
 #X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
 X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename "${0}")
+#If this is false, then the restart happens at 3 am (server time)
+RESTART_NOW="False"
 
 
 NOW_UNIXTIME=$(date +%s)
@@ -132,15 +134,21 @@ function print_v() {
 		;;
 	esac
 }
-##Seconds until the next Mail Server Restart time (3am)
-if [[ $(date +%k) -gt 3 ]]; then
-	RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
-	RESTART_DATE=$(date -d "3am tomorrow")
-	DAY_TEXT="Tomorrow"
+
+
+if [[ $RESTART_NOW == "True" ]]; then
+	RESTART_UNIXTIME=$NOW_UNIXTIME
 else
-	RESTART_UNIXTIME=$(date +%s -d "3am")
-	RESTART_DATE=$(date -d "3am")
-	DAY_TEXT="Today"
+	##Seconds until the next Mail Server Restart time (3am)
+	if [[ $(date +%k) -gt 3 ]]; then
+		RESTART_UNIXTIME=$(date +%s -d "3am tomorrow")
+		RESTART_DATE=$(date -d "3am tomorrow")
+		DAY_TEXT="Tomorrow"
+	else
+		RESTART_UNIXTIME=$(date +%s -d "3am")
+		RESTART_DATE=$(date -d "3am")
+		DAY_TEXT="Today"
+	fi
 fi
 
 echo "Subject: Logfile: Letsencrypt Renewal of Zimbra Cert
