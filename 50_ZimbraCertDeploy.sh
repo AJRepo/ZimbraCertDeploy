@@ -1,10 +1,12 @@
 #!/bin/bash
+DEBUG=0
 
 # Ignore SC2181 - required with sudo
 # shellcheck disable=SC2181
 # Assumes Single Server Installation
 
 #Warning: hostname -A adds a space to the end of returned value(s)
+MY_PID=$$
 FQDN=$(hostname -A | sed -e /\ /s///g)
 DOMAIN=$(hostname -d | sed -e /\ /s///g)
 FROM="<ZimbraMailServer@$FQDN"
@@ -30,7 +32,41 @@ LOG_FILE="$Z_BASE_DIR/log/$THIS_SCRIPT.$NOW_UNIXTIME.log"
 MESSAGE_FILE="/tmp/message.$NOW_UNIXTIME.txt"
 PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 
-touch "$LOG_FILE" ||  echo "Cannot create $LOG_FILE" ; exit 1 
+# Input:  Message
+# Output: Formatted Message String
+# Return: 0 on success, non 0 otherwise
+function print_v() {
+	local level=$1
+ 	THIS_DATE=$(date --iso-8601=seconds)
+
+	case $level in
+		d) # Debug
+		echo -e "$THIS_DATE [DBUG] ${*:2}"
+		;;
+		e) # Error
+		echo -e "$THIS_DATE [ERRS] ${*:2}"
+		;;
+		w) # Warning
+		echo -e "$THIS_DATE [WARN] ${*:2}"
+		;;
+		*) # Any other level
+		echo -e "$THIS_DATE [INFO] ${*:2}"
+		;;
+	esac
+}
+
+
+if [[ $DEBUG == "1" ]]; then
+	print_v d "--About to start program"
+	print_v d "LOG_FILE=$LOG_FILE"
+fi
+
+touch "$LOG_FILE" || ( print_v e "--Cannot create $LOG_FILE" ; exit 1 )
+chown zimbra.zimbra "$LOG_FILE" || ( print_v e "--Cannot chown $LOG_FILE as owned by zimbra" ; exit 1 )
+
+if [[ $DEBUG == "1" ]]; then
+	print_v d "--Touch log file ok"
+fi
 
 # Input:  None
 # Output: None
@@ -47,6 +83,7 @@ function restart_zimbra_if_not_running() {
 	#Do a final check to make sure all zimbra services are running
 	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
 	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
+  #NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped >> $LOG_FILE 2>&1
 	EOF
@@ -115,26 +152,9 @@ function restart_zimbra() {
 	return $_ret
 }
 
-# Input:  Message
-# Output: Formatted Message String
-# Return: 0 on success, non 0 otherwise
-function print_v() {
-	local level=$1
- 	THIS_DATE=$(date --iso-8601=seconds)
-
-	case $level in
-		e) # Error
-		echo -e "$THIS_DATE [ERRS] ${*:2}"
-		;;
-		w) # Warning
-		echo -e "$THIS_DATE [WARN] ${*:2}"
-		;;
-		*) # Any other level
-		echo -e "$THIS_DATE [INFO] ${*:2}"
-		;;
-	esac
-}
-
+if [[ $DEBUG == "1" ]]; then
+	print_v d "--RESTART_NOW=$RESTART_NOW"
+fi
 
 if [[ $RESTART_NOW == "True" ]]; then
 	RESTART_UNIXTIME=$NOW_UNIXTIME
@@ -206,7 +226,11 @@ not yet deployed to the Zimbra mail service.
 
 Current Unixtime: $NOW_UNIXTIME ($NOW_DATE)
 
-If a restart time was set in the script then this script would sleep until
+Script name: $0
+
+Script PID: $MY_PID
+
+If a restart time was set, then this script would sleep until
 Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE $DAY_TEXT)
 
 Now sleeping for $SECONDS_TIL_START seconds before continuing this script which

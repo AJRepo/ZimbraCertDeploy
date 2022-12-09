@@ -12,7 +12,7 @@ the server).
 
 * Install certbot (e.g. `apt install certbot`) on the Zimbra server.
 
-* Install the certbot certificate once manually following https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  but your installation of certbot is better done via "apt install certbot" )
+* Install the certbot certificate once, manually, following https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  . If you are on Ubuntu, your installation of certbot is better done via "apt install certbot" as it will setup the cron scripts, etc.)
 
 * Move the file 50_ZimbraCertDeploy.sh to `/etc/letsencrypt/renewal-hooks/deploy/`
 
@@ -20,10 +20,24 @@ the server).
 
 When certbot renews certificates, it will call any scripts you've put in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
+# Testing:
 
-#Notes:
+If you do NOT put the file 50_ZimbraCertDeploy.sh into the renewal-hooks directory, then you can test
+by running a regular `certbot renew` command and when it successfully renews (or installs) a certificate
+just run the script 50_ZimbraCertDeploy.sh as root (e.g. `sudo ./50_ZimbraCertDeploy.sh` ) .
 
-* This assumes ONE certificate that's assigned to the Zimbra mail server with PEM files cert.pem, chain.pem, fullchain.pem, privkey.pem.
+Essentially you are just calling the script just as it would be called as a renewal hook. 
+
+
+# Notes:
+
+* This script assumes the following:
+
+  *  ONE certificate that's assigned to the Zimbra mail server with PEM files cert.pem, chain.pem, fullchain.pem, privkey.pem.
+
+  * Zimbra installation is to /opt/zimbra
+
+  * Zimbra runs as user zimbra, group zimbra
 
 * It makes a backup of the old certificate PEM files in /opt/zimbra/ssl/letsencrypt/bak.YYYMMDD before replacing those PEM files. Note
 that the granularity of that is to the day, not to the second.
@@ -50,11 +64,14 @@ been tested/deployed.
   * zcs-NETWORK-8.8.15_GA_4173 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4232 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4272 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_4372 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_4481 UBUNTU18_64
 
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P30"
+  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P35"
 
 
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
