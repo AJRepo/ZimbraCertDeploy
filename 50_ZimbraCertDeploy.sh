@@ -92,6 +92,7 @@ function restart_zimbra_if_not_running() {
 	EOF
 
 	#Did the grep find something "stopped" ?
+	# shellcheck disable=SC2181
 	if [[ $? -eq 0 ]]; then
 		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$LOG_FILE"
 		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$PROGRESS_FILE"
@@ -391,6 +392,7 @@ sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmcertmgr verifycrt comm $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 EOF
 
+# shellcheck disable=SC2181
 if [[ $? -ne 0 ]]; then
 	echo "'zmcertmgr verifycert comm' command failed"
 	echo "   Check of certificate failed. stopping" >> "$MESSAGE_FILE.errors"
@@ -405,6 +407,7 @@ sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmproxyctl stop
 EOF
 
+# shellcheck disable=SC2181
 if [[ $? -ne 0 ]]; then
 	print_v e "'zmproxyctl stop' command failed"
 	print_v e "'zmproxyctl stop' command failed" >> "$LOG_FILE"
@@ -418,6 +421,7 @@ sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmmailboxdctl stop
 EOF
 
+# shellcheck disable=SC2181
 if [[ $? -ne 0 ]]; then
 	print_v e "'zmmailboxdctl stop' command failed"
 	print_v e "'zmmailboxdctl stop' command failed" >> "$LOG_FILE"
@@ -458,6 +462,7 @@ sudo -u zimbra -g zimbra -i bash << EOF
 	$Z_BASE_DIR/bin/zmcertmgr deploycrt comm $Z_BASE_DIR/ssl/letsencrypt/cert.pem $Z_BASE_DIR/ssl/letsencrypt/chain.pem
 EOF
 
+# shellcheck disable=SC2181
 if [[ $? -ne 0 ]]; then
 	echo "'certmgr deploycrt comm' command failed"
 	echo "'certmgr deploycrt comm' command failed" >> "$MESSAGE_FILE.errors"
@@ -489,6 +494,7 @@ sudo -u zimbra -g zimbra -i bash << EOF
 EOF
 
 #Do not have any commands between this and zmproxyctl reload above
+# shellcheck disable=SC2181
 if [[ $? -ne 0 ]]; then
 	echo "'zmproxyctl reload' command failed"
 	echo "'zmproxyctl reload' command failed" >> "$MESSAGE_FILE.errors"
