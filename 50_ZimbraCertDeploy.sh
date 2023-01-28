@@ -83,7 +83,10 @@ function restart_zimbra_if_not_running() {
 	#Do a final check to make sure all zimbra services are running
 	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
 	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
-  #NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
+	sudo -u zimbra -g zimbra -i bash <<- EOF
+		$Z_BASE_DIR/bin/zmcontrol status >> $LOG_FILE 2>&1
+	EOF
+	#NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol status | grep -i Stopped >> $LOG_FILE 2>&1
 	EOF
@@ -125,7 +128,7 @@ function restart_zimbra() {
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
 	EOF
-  _ret=$?
+	_ret=$?
 
 	#Do not have any commands between this and zmcontrol restart above
 	if [[ $_ret -ne 0 ]]; then
@@ -509,18 +512,18 @@ print_v i "Command Complete 'zmcontrol restart' " >> "$LOG_FILE"
 
 
 echo "----" >> "$PROGRESS_FILE"
-echo "About to sleep 15 seconds" >> "$PROGRESS_FILE"
-#Sleep 15 seconds before testing status
-sleep 15
+echo "About to sleep 25 seconds" >> "$PROGRESS_FILE"
+#Sleep before testing status
+sleep 25
 
 restart_zimbra_if_not_running
 
 #Email progress report
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$PROGRESS_FILE"
 
-#Do we believe that all services are running? Let's check again in 5 minutes. 
-echo "About to sleep for 5 minutes to check " >> "$PROGRESS_FILE"
-sleep 300
+#Do we believe that all services are running? Let's check again soon
+echo "About to sleep for 10 minutes to check " >> "$PROGRESS_FILE"
+sleep 600
 #Email progress report
 restart_zimbra_if_not_running
 
