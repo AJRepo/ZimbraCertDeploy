@@ -1,4 +1,8 @@
 #!/bin/bash
+# Author: AJRepo
+# License: GPLv3
+# Version: 4.0
+
 DEBUG=0
 
 # Ignore SC2181 - required with sudo
