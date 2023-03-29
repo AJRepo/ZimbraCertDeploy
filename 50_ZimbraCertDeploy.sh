@@ -537,7 +537,10 @@ sleep 600
 #Email progress report
 restart_zimbra_if_not_running
 
+print_v i "--About to exit program and email progress file" >> "$LOG_FILE"
+print_v i "--About to exit program and email progress file" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" >> "$LOG_FILE" 2>&1 < "$PROGRESS_FILE"
+print_v i "--Exit program" >> "$LOG_FILE"
 
 #END MAIN
 ################
