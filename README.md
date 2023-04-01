@@ -66,13 +66,15 @@ been tested/deployed.
   * zcs-NETWORK-8.8.15_GA_4272 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4372 UBUNTU18_64
   * zcs-NETWORK-8.8.15_GA_4481 UBUNTU18_64
-
+  * zcs-NETWORK-8.8.15_GA_4484 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_4508 UBUNTU18_64
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P30"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P35"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P36"
+  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P37"
 
 * Notes: it has been reported that in some cases the restart at the end
  does not complete and you have to login remotely and run "zmcontrol restart"
