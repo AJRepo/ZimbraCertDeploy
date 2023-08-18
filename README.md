@@ -54,29 +54,10 @@ Has been used successfully in production for years, but only recently have been 
 been tested/deployed.
 
 * Used successfully on production Zimbra versions as reported by the browser in "User->about"
-  * zcs-NETWORK-8.8.15_GA_3895 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_3869 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_3980 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_3996 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4007 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4125 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4156 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4173 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4232 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4272 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4372 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4481 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4484 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4508 UBUNTU18_64
-  * zcs-NETWORK-8.8.15_GA_4545 UBUNTU18_64
+  * zcs-NETWORK-8.8.15_GA_3895 UBUNTU18_64 ( and newer versions of the 8.8.15 line) 
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P30"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P35"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P36"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P37"
-  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P40"
+  * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26" ( and newer versions of the 8.8.15 line)
 
 
 * Notes: it has been reported that in some cases the restart at the end
