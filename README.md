@@ -6,27 +6,46 @@ good to have a valid certificate on each Zimbra mail server even if that's not t
 certificate seen by browsers (e.g. if you use HaProxy or the like between clients and
 the server).
 
+# Requrements
+
+* Zimbra
+
+* Certbot
+
+* Bash
+
+
 # Installation Process
 
 * Install Zimbra Normally
 
 * Install certbot (e.g. `apt install certbot`) on the Zimbra server.
 
-* Install the certbot certificate once, manually, following https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  . If you are on Ubuntu, your installation of certbot is better done via "apt install certbot" as it will setup the cron scripts, etc.)
+* Install the certbot certificate once, manually. Some examples of this are at https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  .
+
+* Edit the file 50_ZimbraCertDeploy.sh to choose if you want the deployment method (RESTART_PLAN=) to be "Now", "Later", or "Manual"
+  * Now = deploy and restart as soon as certobot gets a new certificate
+  * Later = 3 am local server time, restart zimbra then
+  * Manual = Don't deploy, just notify that a new certificate is downloaded and ready to deploy to Zimbra.
 
 * Move the file 50_ZimbraCertDeploy.sh to `/etc/letsencrypt/renewal-hooks/deploy/`
 
-* Check that certificate renewals are scheduled (e.g. `systemctl status certbot.timer`)
+* Check that certificate renewals are scheduled. Could be found as:
+   * `more /etc/cron.d/certbot`
+   * `systemctl status certbot.timer`
 
-When certbot renews certificates, it will call any scripts you've put in `/etc/letsencrypt/renewal-hooks/deploy/` .
+When certbot renews certificates, it will call the script you put in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
 # Testing:
 
-If you do NOT put the file 50_ZimbraCertDeploy.sh into the renewal-hooks directory, then you can test
-by running a regular `certbot renew` command and when it successfully renews (or installs) a certificate
-just run the script 50_ZimbraCertDeploy.sh as root (e.g. `sudo ./50_ZimbraCertDeploy.sh` ) .
+You can run the script 50_ZimbraCertDeploy.sh after a certbot renewal has taken place. E.g. To test
 
-Essentially you are just calling the script just as it would be called as a renewal hook. 
+1. Run `certbot renew` to get a new certificate. If you get a new certificate, then do step 2 below.
+
+2. Run `sudo ./50_ZimbraCertDeploy.sh` to deploy that certificate.
+
+Essentially you are just calling the script just as it would be called as a renewal hook automatically
+when placed in `/etc/letsencrypt/renewal-hooks/deploy/`.
 
 
 # Notes:
@@ -54,7 +73,7 @@ Has been used successfully in production for years, but only recently have been 
 been tested/deployed.
 
 * Used successfully on production Zimbra versions as reported by the browser in "User->about"
-  * zcs-NETWORK-8.8.15_GA_3895 UBUNTU18_64 ( and newer versions of the 8.8.15 line) 
+  * zcs-NETWORK-8.8.15_GA_3895 UBUNTU18_64 ( and newer versions of the 8.8.15 line)
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26" ( and newer versions of the 8.8.15 line)
