@@ -27,7 +27,6 @@ FROM="<ZimbraMailServer@$FQDN"
 EMAIL="postmaster@$DOMAIN"
 Z_BASE_DIR="/opt/zimbra"
 #X3_FILE=$Z_BASE_DIR/ssl/letsencrypt/lets-encrypt-x3-cross-signed.pem.txt
-X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename "${0}")
 
 #Restart can be "Now", or "Manual" if anything else will restart at 3 am
@@ -375,7 +374,7 @@ if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
 	fi
 else
 	if ! chown zimbra:zimbra $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key; then
-		echo "ERROR: unable to chown zimbra commercial.key" >> $MESSAGE_FILE.errors
+		echo "ERROR: unable to chown zimbra commercial.key" >> "$MESSAGE_FILE.errors"
 		print_v e "ERROR: unable to chown zimbra commercial.key, Exiting" >> "$MESSAGE_FILE.errors"
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 		exit 1
