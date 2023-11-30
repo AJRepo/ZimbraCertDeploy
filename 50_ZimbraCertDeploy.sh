@@ -42,7 +42,7 @@ PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 # Return: 0 on success, non 0 otherwise
 function print_v() {
 	local level=$1
- 	THIS_DATE=$(date --iso-8601=seconds)
+	THIS_DATE=$(date --iso-8601=seconds)
 
 	case $level in
 		d) # Debug
@@ -86,32 +86,40 @@ fi
 # Input:  None
 # Output: None
 # Return: 0 on success, non 0 otherwise
-function restart_zimbra_proxy() {
+function test_zimbra_running() {
 	local _ret=
 
 	_ret=1
-	print_v i "In function restart_zimbra_proxy----" >> "$PROGRESS_FILE"
-	print_v i "In function restart_zimbra_proxy----" >> "$LOG_FILE"
-	echo "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$PROGRESS_FILE"
-	print_v i "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" >> "$LOG_FILE"
+	print_v i "In function test_zimbra_running----" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
+	echo "--Echo file=$PROGRESS_FILE: In test_zimbra_running--" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
+
+	#Do a final check to make sure all zimbra services are running
+	print_v i "--About to test running 'zmcontrol status'" | tee -a "$PROGRESS_FILE" "$LOG_FILE"  > /dev/null
+	#NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
 	sudo -u zimbra -g zimbra -i bash <<- EOF
-		$Z_BASE_DIR/bin/zmproxyctl reload
+		#Since bash 4 you can replace 2&>1 |" with |&
+		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE $PROGRESS_FILE | grep -i Stopped
 	EOF
 
-	#Do not have any commands between this and zmproxyctl reload above
+	#Did the grep find something "stopped" ?
 	# shellcheck disable=SC2181
-	if [[ $? -ne 0 ]]; then
-		echo "'zmproxyctl reload' command failed"
-		echo "'zmproxyctl reload' command failed" >> "$MESSAGE_FILE.errors"
-		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
-		exit 1
+	if [[ $? -eq 0 ]]; then
+		_ret=1
+		print_v w "--Some Zimbra services are not running" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
 	else
-		echo "'zmproxyctl reload' command success" >> "$PROGRESS_FILE"
 		_ret=0
 	fi
 }
 
+# Input:  None
+# Output: None
+# Return: 0 on success, non 0 otherwise
+#DEPRECATED: See earlier commits
+function restart_zimbra_proxy() {
+	local _ret=
 
+	_ret=1
+}
 
 # Input:  None
 # Output: None
@@ -121,36 +129,23 @@ function restart_zimbra_if_not_running() {
 
 	_ret=1
 
-	print_v i "In function restart_zimbra_if_not_running----" >> "$PROGRESS_FILE"
-	print_v i "In function restart_zimbra_if_not_running----" >> "$LOG_FILE"
-	echo "--Echo file=$PROGRESS_FILE: In restart_zimbra_if_not_running--" >> "$PROGRESS_FILE"
-	echo "--Echo file=$LOG_FILE: In restart_zimbra_if_not_running--" >> "$LOG_FILE"
+	print_v i "In function restart_zimbra_if_not_running----" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
+	echo "--Echo file=$PROGRESS_FILE: In restart_zimbra_if_not_running--" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 	#Do a final check to make sure all zimbra services are running
-	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
-	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
-	#NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
-	sudo -u zimbra -g zimbra -i bash <<- EOF
-    #Since bash 4 you can replace "2&>1 |" with |&
-		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
-	EOF
+	print_v i "--About to test running 'zmcontrol status'" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 
-	#Did the grep find something "stopped" ?
-	# shellcheck disable=SC2181
-	if [[ $? -eq 0 ]]; then
-		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$LOG_FILE"
-		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$PROGRESS_FILE"
+	if ! test_zimbra_running; then
+		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 
 		sudo -u zimbra -g zimbra -i bash <<- EOF
 			$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
 		EOF
 		_ret=$?
 
-		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$LOG_FILE"
-		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$PROGRESS_FILE"
+		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 	else
 		_ret=0
-		print_v i "--All Zimbra services are running" >> "$LOG_FILE"
-		print_v i "--All Zimbra services are running" >> "$PROGRESS_FILE"
+		print_v i "--All Zimbra services are running" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 		print_v i "--" >> "$PROGRESS_FILE"
 	fi
 	print_v i "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$PROGRESS_FILE"
@@ -167,8 +162,7 @@ function restart_zimbra() {
 	local _ret=
 
 	_ret=1
-	print_v i "In function restart_zimbra----" >> "$PROGRESS_FILE"
-	print_v i "In function restart_zimbra----" >> "$LOG_FILE"
+	print_v i "In function restart_zimbra----" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		$Z_BASE_DIR/bin/zmcontrol restart >> "$LOG_FILE" 2>&1
@@ -177,28 +171,27 @@ function restart_zimbra() {
 
 	#Do not have any commands between this and zmcontrol restart above
 	if [[ $_ret -ne 0 ]]; then
-		print_v e "'zmcontrol restart' command failed" >> "$MESSAGE_FILE.errors"
-		print_v e "'zmcontrol restart' command failed" >> "$LOG_FILE"
+		print_v e "'zmcontrol restart' command failed" | tee "$MESSAGE_FILE.errors" "$LOG_FILE" > /dev/null
 		#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 		#try again
 		if ! restart_zimbra_if_not_running; then
-			print_v e "'restart_zimbra_if_not_running failed" >> "$LOG_FILE"
-			print_v e "'restart_zimbra_if_not_running failed" >> "$MESSAGE_FILE.errors"
+			print_v e "'restart_zimbra_if_not_running failed" | tee "$MESSAGE_FILE.errors" "$LOG_FILE" > /dev/null
 			#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 			$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 			exit 1
 		fi
 	else
-		print_v i "'zmcontrol restart' command success" >> "$PROGRESS_FILE"
-		print_v i "'zmcontrol restart' command success" >> "$LOG_FILE"
+		print_v i "'zmcontrol restart' command success" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 	fi
 
 	NOW_DATE=$(date)
 
-	echo "Exit function restart_zimbra with _ret=$_ret" >> "$PROGRESS_FILE"
+	print_v i "Exit function restart_zimbra with _ret=$_ret" >> "$PROGRESS_FILE"
 	return $_ret
 }
+
+###########MAIN################################
 
 if [[ $DEBUG == "1" ]]; then
 	print_v d "--RESTART_PLAN=$RESTART_PLAN"
@@ -266,6 +259,9 @@ if ! touch "$PROGRESS_FILE"; then
 	print_v e "Error: Cannot create $PROGRESS_FILE" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 	exit
+else
+	#Need this to allow sudo commands to log
+	chown zimbra:zimbra $PROGRESS_FILE
 fi
 ######################################
 

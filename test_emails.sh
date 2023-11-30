@@ -5,10 +5,10 @@
 
 #This test script runs zmcontrol status and looks for running or stopped services
 # then sends you an email about it. Run this script as a test to make sure
-# you can get alerts from your Zimbra machine. 
+# you can get alerts from your Zimbra machine.
 # TESTS:
 # * Can run as user zimbra
-# * Can get emails 
+# * Can get emails
 # * Can make backup directory
 # * Can run verifycrt ok
 
@@ -30,6 +30,10 @@ Z_BASE_DIR="/opt/zimbra"
 X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename "${0}")
 
+#Restart can be "Now", or "Manual" if anything else will restart at 3 am
+RESTART_PLAN="NONE: testing"
+
+
 NOW_UNIXTIME=$(date +%s)
 NOW_DATE=$(date)
 
@@ -48,7 +52,7 @@ PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 # Return: 0 on success, non 0 otherwise
 function print_v() {
 	local level=$1
- 	THIS_DATE=$(date --iso-8601=seconds)
+	THIS_DATE=$(date --iso-8601=seconds)
 
 	case $level in
 		d) # Debug
@@ -96,17 +100,20 @@ function test_zimbra_running() {
 	local _ret=
 
 	_ret=1
-	print_v i "In function test_zimbra_running----" >> "$PROGRESS_FILE"
-	print_v i "In function test_zimbra__running----" >> "$LOG_FILE"
-	echo "--Echo file=$PROGRESS_FILE: In test_zimbra_running--" >> "$PROGRESS_FILE"
-	echo "--Echo file=$LOG_FILE: In test_zimbra_running--" >> "$LOG_FILE"
+	print_v i "In function test_zimbra_running----" | tee -a "$PROGRESS_FILE" "$LOG_FILE"
+	echo "--Echo file=$PROGRESS_FILE: In test_zimbra_running--" | tee -a "$PROGRESS_FILE" "$LOG_FILE"
+
 	#Do a final check to make sure all zimbra services are running
-	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
-	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
+	print_v i "--About to test running 'zmcontrol status'" | tee -a "$PROGRESS_FILE" "$LOG_FILE"
 	#NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
+
+	if [[ $DEBUG == "1" ]]; then
+		print_v i "TESTING zmcontrol status to $LOG_FILE, $PROGRESS_FILE"
+	fi
+
 	sudo -u zimbra -g zimbra -i bash <<- EOF
 		#Since bash 4 you can replace "2&>1 |" with |&
-		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
+		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE $PROGRESS_FILE | grep -i Stopped
 	EOF
 
 	#Did the grep find something "stopped" ?
@@ -199,6 +206,9 @@ function restart_zimbra() {
 	echo "Exit function restart_zimbra with _ret=$_ret" >> "$PROGRESS_FILE"
 	return $_ret
 }
+
+
+###########MAIN################################
 
 if [[ $DEBUG == "1" ]]; then
 	print_v d "--RESTART_PLAN=$RESTART_PLAN"
@@ -376,16 +386,16 @@ NOW_DATE=$(date)
 
 echo "----" >> "$PROGRESS_FILE"
 
-if [[ test_zimbra_running -eq 1 ]]; then
+if ! test_zimbra_running; then
 	echo "Test failed for testing zimbra running at $NOW_DATE" >> "$PROGRESS_FILE"
-	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
+	print_v e "ERROR: Test failed for testing zimbra running at $NOW_DATE" >> "$PROGRESS_FILE"
 else
 	echo "Test succeeded for testing zimbra running at $NOW_DATE" >> "$PROGRESS_FILE"
-	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
+	print_v i "SUCCESS: Test OK for testing zimbra running at $NOW_DATE" >> "$PROGRESS_FILE"
 fi
 
-print_v i "--About to exit program and email progress file" >> "$LOG_FILE"
-print_v i "--About to exit program and email progress file" >> "$PROGRESS_FILE"
+print_v i "--About to exit program and email progress file $PROGRESS_FILE" >> "$LOG_FILE"
+print_v i "--About to exit program and email progress file $PROGRESS_FILE" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
 print_v i "--Exit program" >> "$LOG_FILE"
 
