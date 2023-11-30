@@ -261,7 +261,7 @@ if ! touch "$PROGRESS_FILE"; then
 	exit
 else
 	#Need this to allow sudo commands to log
-	chown zimbra:zimbra $PROGRESS_FILE
+	chown zimbra:zimbra "$PROGRESS_FILE"
 fi
 ######################################
 
@@ -404,7 +404,7 @@ fi
 #X1 Cert Chaining
 X1CERTURI="https://letsencrypt.org/certs/isrgrootx1.pem.txt"
 print_v i "X1 Cert Chaining" >> "$LOG_FILE"
-if ! wget -o /tmp/ISRG-X1.pem.log -O /tmp/ISRG-X1.pem $X1CERTURI ]]; then
+if ! wget -o /tmp/ISRG-X1.pem.log -O /tmp/ISRG-X1.pem $X1CERTURI ; then
 	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$MESSAGE_FILE.errors"
 	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$PROGRESS_FILE"
 	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
