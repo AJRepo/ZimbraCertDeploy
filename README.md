@@ -23,6 +23,10 @@ the server).
 
 * Install the certbot certificate once, manually. Some examples of this are at https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  .
 
+  * Usually something like 'sudo certbot certonly --standalone -d MY_FQDN --preferred-challenges=http --agree-tos --email MYEMAIL --http-01-port=80'
+
+Note: the port above is 80. It's an unused port for Zimbra, so it works well for this. Cannot use port 8080 as that's already used by Zimbra. Setup, FW,  NAT and/or Proxy apropriately to accept the port you use above
+
 * Edit the file 50_ZimbraCertDeploy.sh to choose if you want the deployment method (RESTART_PLAN=) to be "Now", "Later", or "Manual"
   * Now = deploy and restart as soon as certobot gets a new certificate
   * Later = 3 am local server time, restart zimbra then
