@@ -42,7 +42,7 @@ PROGRESS_FILE="/tmp/message.$NOW_UNIXTIME.txt.progress"
 # Return: 0 on success, non 0 otherwise
 function print_v() {
 	local level=$1
- 	THIS_DATE=$(date --iso-8601=seconds)
+	THIS_DATE=$(date --iso-8601=seconds)
 
 	case $level in
 		d) # Debug
@@ -111,6 +111,34 @@ function restart_zimbra_proxy() {
 	fi
 }
 
+# Input:  None
+# Output: None
+# Return: 0 if all services running, non-0 otherwise
+function check_if_running() {
+	local _ret=
+
+	_ret=1
+
+	print_v i "In function check_if_running----" >> "$PROGRESS_FILE"
+	print_v i "In function check_if_running----" >> "$LOG_FILE"
+	echo "--Echo file=$PROGRESS_FILE: In check_if_running--" >> "$PROGRESS_FILE"
+	sudo -u zimbra -g zimbra -i bash <<- EOF
+		#Since bash 4 you can replace "2&>1 |" with |&
+		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
+	EOF
+
+	#If you find "Stopped" that's bad. Return 1
+	# shellcheck disable=SC2181
+	if [[ $? -eq 0 ]]; then
+		print_v w "--In function check_if_running: Some Zimbra services are Stopped" >> "$LOG_FILE"
+		print_v w "--In function check_if_running: Some Zimbra services are Stopped" >> "$PROGRESS_FILE"
+		_ret=1
+	else
+		_ret=0
+	fi
+
+	return $_ret
+}
 
 
 # Input:  None
@@ -124,19 +152,14 @@ function restart_zimbra_if_not_running() {
 	print_v i "In function restart_zimbra_if_not_running----" >> "$PROGRESS_FILE"
 	print_v i "In function restart_zimbra_if_not_running----" >> "$LOG_FILE"
 	echo "--Echo file=$PROGRESS_FILE: In restart_zimbra_if_not_running--" >> "$PROGRESS_FILE"
-	echo "--Echo file=$LOG_FILE: In restart_zimbra_if_not_running--" >> "$LOG_FILE"
 	#Do a final check to make sure all zimbra services are running
-	print_v i "--About to test running 'zmcontrol status'" >> "$LOG_FILE"
-	print_v i "--About to test running 'zmcontrol status'" >> "$PROGRESS_FILE"
-	#NOTE: log file must be owned by zimbra if you run this command as 'sudo -u zimbra...'
-	sudo -u zimbra -g zimbra -i bash <<- EOF
-    #Since bash 4 you can replace "2&>1 |" with |&
-		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
-	EOF
+
+	#Returns 0 if all running ok. 
+	check_if_running
+	_ret=$?
 
 	#Did the grep find something "stopped" ?
-	# shellcheck disable=SC2181
-	if [[ $? -eq 0 ]]; then
+	if [[ $_ret -eq 1 ]]; then
 		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$LOG_FILE"
 		print_v w "--Some Zimbra services are not running, running 'zmcontrol restart' again" >> "$PROGRESS_FILE"
 
@@ -148,7 +171,6 @@ function restart_zimbra_if_not_running() {
 		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$LOG_FILE"
 		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$PROGRESS_FILE"
 	else
-		_ret=0
 		print_v i "--All Zimbra services are running" >> "$LOG_FILE"
 		print_v i "--All Zimbra services are running" >> "$PROGRESS_FILE"
 		print_v i "--" >> "$PROGRESS_FILE"
@@ -569,7 +591,7 @@ NOW_DATE=$(date)
 echo "Emailing progress right before restarting services at $NOW_DATE" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
 
-#have to wait 60 seconds or so for zimlet to restart so best to do this at night
+#have to wait 1-15 minutes or so for some zimlets to restart so best to do this at night
 print_v i "Print_v: About to restart 'zmcontrol restart' at $NOW_DATE" >> "$LOG_FILE"
 echo "Echo: About to restart 'zmcontrol restart' at $NOW_DATE" >> "$PROGRESS_FILE"
 restart_zimbra
@@ -586,29 +608,41 @@ echo "----" >> "$PROGRESS_FILE"
 echo "All done. About to send message of completion" >> "$PROGRESS_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
 
-#have to wait 60 seconds or so for zimlet to restart so best to do this at night
-print_v i "About to run 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
-print_v i "About to run 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
-restart_zimbra_if_not_running
-print_v i "Command Complete 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
-print_v i "Command Complete 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
+# We should be done at this point.... but wait. Sometimes the server reports
+# stopped services. What's going on? Let's run some checks over 
+# time to see if there's a discrepancy between running status and actual restarts. 
+# this calls "restart_zimbra_if_not_running" 
 
+#have to wait 1-15 minutes or so for some zimlets to restart so best to do this at night
+echo "----ECHO Starting Checks for running services----" >> "$PROGRESS_FILE"
+echo "----ECHO About to sleep 25 seconds" >> "$PROGRESS_FILE"
 
-echo "----" >> "$PROGRESS_FILE"
-echo "About to sleep 25 seconds" >> "$PROGRESS_FILE"
-#Sleep before testing status
+print_v i "Check 0: About to sleep for 25 seconds to check if zimbra is running" >> "$PROGRESS_FILE"
+print_v i "Check 0: About to sleep for 25 seconds to check if zimbra is running" >> "$LOG_FILE"
 sleep 25
-
+print_v i "Check 0: About to run 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
+print_v i "Check 0: About to run 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
 restart_zimbra_if_not_running
+print_v i "Check 0: Command Complete 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
+print_v i "Check 0: Command Complete 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
 
-#Email progress report
+#Email progress report of check 0
+print_v i  "sendmail of progress report" >> "$LOG_FILE"
 $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_FILE"
 
-#Do we believe that all services are running? Let's check again soon
-echo "About to sleep for 10 minutes to check " >> "$PROGRESS_FILE"
-sleep 600
-#Email progress report
-restart_zimbra_if_not_running
+#Is 25 seconds enough? Perhaps not. Let's check several more times. 
+for CHECKNUM in $(seq 1 3); do 
+	#Do we believe that all services are running? Let's check again
+	print_v i "Check $CHECKNUM: About to sleep for 10 minutes to check " >> "$PROGRESS_FILE"
+	print_v i "Check $CHECKNUM: About to sleep for 10 minutes to check " >> "$LOG_FILE"
+	print_v i "Check $CHECKNUM: About to run 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
+	print_v i "Check $CHECKNUM: About to run 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
+	sleep 600
+	#Restart if not running
+	restart_zimbra_if_not_running
+	print_v i "Check $CHECKNUM: Command Complete 'restart_zimbra_if_not_running' " >> "$PROGRESS_FILE"
+	print_v i "Check $CHECKNUM: Command Complete 'restart_zimbra_if_not_running' " >> "$LOG_FILE"
+done
 
 print_v i "--About to exit program and email progress file" >> "$LOG_FILE"
 print_v i "--About to exit program and email progress file" >> "$PROGRESS_FILE"
