@@ -11,6 +11,7 @@ DEBUG=0
 
 #Warning: hostname -A adds a space to the end of returned value(s)
 MY_PID=$$
+MY_PROCESS=$(ps wwwwwww --pid $MY_PID)
 FQDN=$(hostname -A | sed -e /\ /s///g)
 DOMAIN=$(hostname -d | sed -e /\ /s///g)
 FROM="<ZimbraMailServer@$FQDN"
@@ -335,6 +336,7 @@ Current Unixtime: $NOW_UNIXTIME ($NOW_DATE)
 Script name: $0
 Script Args: $1
 
+Script: $MY_PROCESS
 Script PID: $MY_PID
 
 If a restart time was set, then this script would sleep until
