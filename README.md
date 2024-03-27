@@ -81,6 +81,7 @@ been tested/deployed.
 
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18_64 NETWORK edition, Patch 8.8.15_P26" ( and newer versions of the 8.8.15 line)
+  * "Release 10.0.7.GA.4518.UBUNTU20_64 NETWORK edition."
 
 
 * Notes: it has been reported that in some cases the restart at the end
