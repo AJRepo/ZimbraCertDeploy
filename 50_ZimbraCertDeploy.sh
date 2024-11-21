@@ -339,10 +339,10 @@ Script Args: $1
 Script: $MY_PROCESS
 Script PID: $MY_PID
 
-If a restart time was set, then this script would sleep until
+If a restart time was set, then this script would wait until
 Restart Unixtime: $RESTART_UNIXTIME ($RESTART_DATE $DAY_TEXT)
 
-About to sleep for $SECONDS_TIL_START seconds before continuing this script which
+About to wait for $SECONDS_TIL_START seconds before continuing this script which
 will deploy the certbot certificate to Zimbra and restart the server.
 
 The file for error messages related to this process will be $MESSAGE_FILE.errors
@@ -376,10 +376,10 @@ $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.start" |& tee -a "
 
 
 #####################################
-# Sleep and then start the backup
+# Wait for prompt and then start the backup
 #####################################
 
-sleep "$SECONDS_TIL_START"
+read -r -t "$SECONDS_TIL_START" -p "Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:" IS_CONTINUE
 
 
 echo "Subject: Letsencrypt Renewal of Zimbra Cert progress
@@ -388,7 +388,9 @@ From: <$FROM>
 Zimbra Certificate Renewal progress
 This file is $PROGRESS_FILE
 
-Finished sleeping $SECONDS_TIL_START
+Finished waiting $SECONDS_TIL_START
+
+Continue Status: $IS_CONTINUE
 
 Now continuing with the backup and upgrade
 
@@ -616,8 +618,7 @@ $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$PROGRESS_FILE" |& tee -a "$LOG_
 # this calls "restart_zimbra_if_not_running" 
 
 #have to wait 1-15 minutes or so for some zimlets to restart so best to do this at night
-echo "----ECHO Starting Checks for running services----" >> "$PROGRESS_FILE"
-echo "----ECHO About to sleep 25 seconds" >> "$PROGRESS_FILE"
+echo "----ECHO Starting Checks for running services----" ; echo "----ECHO About to sleep 25 seconds" >> "$PROGRESS_FILE"
 
 print_v i "Check 0: About to sleep for 25 seconds to check if zimbra is running" >> "$PROGRESS_FILE"
 print_v i "Check 0: About to sleep for 25 seconds to check if zimbra is running" >> "$LOG_FILE"
