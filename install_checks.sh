@@ -5,6 +5,12 @@
 #Script to test zimbra and certbot environment to see if both are
 #setup ok.
 
+#run commands as zimbra user
+if [[ $(whoami) != "zimbra" ]]; then
+	echo "Please run this script as user zimbra"
+	exit 1
+fi
+
 #Check name used
 ZIMBRA_HOSTNAME=$(zmhostname)
 echo "FQDN reported as $ZIMBRA_HOSTNAME"
