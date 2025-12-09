@@ -452,7 +452,7 @@ else
 fi
 
 ################Note X3 Expires 2021-09-30
-#X3 code removed 2025-11-09. See commit log. 
+#X3 code removed 2025-12-09. See commit log. 
 ##############X3 Expires#######################
 
 cd $Z_BASE_DIR/ssl/letsencrypt/ || exit 1
