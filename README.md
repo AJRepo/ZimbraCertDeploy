@@ -1,14 +1,18 @@
 # ZimbraCertDeploy
+
 Letsencrypt Post-Renew Script customized for a Zimbra server
 
-This program automatically installs the TLS certificate that has been downloaded by certbot.
+This program automatically installs into Zimbra
+the TLS certificate that has been downloaded by certbot
 
-It leverages the Certbot post-deploy hooks to run automatically after certbot has renewed a
+This script leverages the Certbot post-deploy hooks to
+run automatically after certbot has renewed a
 certificate, or it can be run independently.
 
-When certbot renews certificates, it calls scripts in `/etc/letsencrypt/renewal-hooks/deploy/` .
+When certbot renews certificates, it calls scripts
+in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
-# Requrements
+## Requrements
 
 * Zimbra
 
@@ -16,20 +20,30 @@ When certbot renews certificates, it calls scripts in `/etc/letsencrypt/renewal-
 
 * Bash
 
-
-# Installation Process
+## Installation Process
 
 * Install Zimbra Normally
 
 * Install certbot (e.g. `apt install certbot`) on the Zimbra server.
 
-* Install the certbot certificate once, manually. Some examples of this are at https://wiki.zimbra.com/wiki/Installing\_a\_LetsEncrypt\_SSL\_Certificate  (longer explanation at https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it  .
+* Install the certbot certificate once, manually. Some documentation:
 
-  * Usually something like 'sudo certbot certonly --standalone -d MY\_FQDN --preferred-challenges=http --agree-tos --email MYEMAIL --http-01-port=80'
+  ** [Short Explanation](https://wiki.zimbra.com/wiki/Installing_a_LetsEncrypt_SSL_Certificate)
+  ** [Longer Explanation](https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it)
 
-Note: the port above is 80. It's an unused port for Zimbra, so it works well for this. Cannot use port 8080 as that's already used by Zimbra. Setup, FW,  NAT and/or Proxy apropriately to accept the port you use above
+  ** Usually something like
+'sudo certbot certonly --standalone -d MY\_FQDN
+    --preferred-challenges=http --agree-tos --email MYEMAIL --http-01-port=80'
 
-* Edit the file 50\_ZimbraCertDeploy.sh to choose if you want the deployment method (RESTART\_PLAN=) to be "Now", "Later", or "Manual"
+Note: the port above is 80. Certbot uses this port which is ok because
+Port 80 is an unused port for Zimbra.
+
+Note: Do not use port 8080 for Certbot as that's already used by Zimbra.
+Setup, FW,  NAT and/or Proxy apropriately to accept the port you use above
+
+* Edit the file 50\_ZimbraCertDeploy.sh to choose if you want the
+deployment method (RESTART\_PLAN=) to be "Now", "Later", or "Manual"
+
   * Now = deploy and restart as soon as certobot gets a new certificate
   * Later = 3 am local server time, restart zimbra then
   * Manual = Don't deploy, just notify that a new certificate is downloaded and ready to deploy to Zimbra.
@@ -50,7 +64,7 @@ ExecStart=/usr/bin/screen -dmS cert_renew /usr/bin/certbot -q renew
 ```
 
 
-# Testing:
+## Testing
 
 You can run the script 50\_ZimbraCertDeploy.sh after a certbot renewal has taken place. E.g. To test
 `50_ZimbraCertDeploy.sh` separately from `certbot renew` do the following:
@@ -63,7 +77,7 @@ Essentially you are just calling the script just as it would be called as a rene
 when placed in `/etc/letsencrypt/renewal-hooks/deploy/`.
 
 
-# Notes:
+## Notes
 
 * This script assumes the following:
 
