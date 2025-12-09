@@ -68,15 +68,16 @@ function print_v() {
 	esac
 }
 
-
 print_v d "--About to start program"
 print_v d "LOG_FILE=$LOG_FILE"
 
 #one cannot use
 # cmd || (cmd2; exit)
 #because the exit in the () only exits the sub shell () not this script
+###########################################
 if ! touch "$LOG_FILE"; then
-	print_v e "--Cannot create $LOG_FILE"
+	print_v e "Error: Cannot create $LOG_FILE" | tee -a "$MESSAGE_FILE.errors"
+	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 	exit 1
 fi
 
@@ -84,10 +85,19 @@ if ! chown zimbra.zimbra "$LOG_FILE"; then
 	print_v e "--Cannot run command 'chown zimbra.zimbra $LOG_FILE'"
 	exit 1
 fi
-
-if [[ $DEBUG == "1" ]]; then
-	print_v d "--Touch log file ok"
+######################################
+if ! touch "$PROGRESS_FILE"; then
+	print_v e "Error: Cannot create $PROGRESS_FILE" | tee -a "$MESSAGE_FILE.errors"
+	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
+	exit 1
 fi
+if ! chown zimbra.zimbra "$PROGRESS_FILE"; then
+	print_v e "--Cannot run command 'chown zimbra.zimbra $PROGRESS_FILE'"
+	exit 1
+fi
+######################################
+
+print_v d "--Touch log files ok"
 
 # Input:  None
 # Output: None
@@ -158,12 +168,10 @@ function restart_zimbra_if_not_running() {
 		EOF
 		_ret=$?
 
-		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$LOG_FILE"
-		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" >> "$PROGRESS_FILE"
+		print_v i "--Second Restart Attempted 'zmcontrol restart' with result $?" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
 	else
-		print_v i "--All Zimbra services are running" >> "$LOG_FILE"
-		print_v i "--All Zimbra services are running" >> "$PROGRESS_FILE"
-		print_v i "--" >> "$PROGRESS_FILE"
+		print_v i "--All Zimbra services are running" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
+		print_v i "--" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
 	fi
 	print_v i "Exit function restart_zimbra_if_not_running with _ret=$_ret" >> "$PROGRESS_FILE"
 
@@ -179,8 +187,7 @@ function restart_zimbra() {
 	local _ret=
 
 	_ret=1
-	print_v i "In function restart_zimbra----" >> "$PROGRESS_FILE"
-	print_v i "In function restart_zimbra----" >> "$LOG_FILE"
+	print_v i "In function restart_zimbra----" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
 
 	sudo -u zimbra -g zimbra bash <<- EOF
 		source ~/.bashrc
@@ -190,14 +197,12 @@ function restart_zimbra() {
 
 	#Do not have any commands between this and zmcontrol restart above
 	if [[ $_ret -ne 0 ]]; then
-		print_v e "'zmcontrol restart' command failed" >> "$MESSAGE_FILE.errors"
-		print_v e "'zmcontrol restart' command failed" >> "$LOG_FILE"
+		print_v e "'zmcontrol restart' command failed" | tee -a "$LOG_FILE" "$PROGRESS_FILE" "$MESSAGE_FILE.errors" > /dev/null
 		#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 		#try again
 		if ! restart_zimbra_if_not_running; then
-			print_v e "'restart_zimbra_if_not_running failed" >> "$LOG_FILE"
-			print_v e "'restart_zimbra_if_not_running failed" >> "$MESSAGE_FILE.errors"
+			print_v e "'restart_zimbra_if_not_running failed" | tee -a "$LOG_FILE" "$PROGRESS_FILE" "$MESSAGE_FILE.errors" > /dev/null
 			#email the error log file, if zimbra isn't running, log sendmail stderr to $LOG_FILE
 			$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 			if [[ $DEBUG == 1 ]]; then
@@ -206,8 +211,7 @@ function restart_zimbra() {
 			exit 1
 		fi
 	else
-		print_v i "'zmcontrol restart' command success" >> "$PROGRESS_FILE"
-		print_v i "'zmcontrol restart' command success" >> "$LOG_FILE"
+		print_v i "'zmcontrol restart' command success" | tee -a "$LOG_FILE" "$PROGRESS_FILE" > /dev/null
 	fi
 
 	NOW_DATE=$(date)
@@ -268,21 +272,6 @@ From: <$FROM>
 To: <$EMAIL>
 
 Zimbra Error Messages: " > "$MESSAGE_FILE.errors"
-######################################
-
-if ! touch "$LOG_FILE"; then
-	print_v e "Error: Cannot create $LOG_FILE" >> "$MESSAGE_FILE.errors"
-	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
-	exit
-fi
-######################################
-
-if ! touch "$PROGRESS_FILE"; then
-	print_v e "Error: Cannot create $PROGRESS_FILE" >> "$MESSAGE_FILE.errors"
-	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
-	exit
-fi
-######################################
 
 
 ########NOT MANUAL: CONTINUE AND NOTIFY ABOUT SCRIPT STARTING (MESSAGE_FILE.start)
