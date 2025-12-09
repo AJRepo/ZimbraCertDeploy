@@ -3,7 +3,7 @@
 # License: GPLv3
 # Version: 4.5
 
-DEBUG=1
+DEBUG=0
 
 # Ignore SC2181 - required with sudo
 # shellcheck disable=SC2181
@@ -91,37 +91,6 @@ fi
 
 # Input:  None
 # Output: None
-# Return: 0 on success, non 0 otherwise
-function restart_zimbra_proxy() {
-	local _ret=
-
-	_ret=1
-	print_v i "In function restart_zimbra_proxy----" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
-	print_v d "In function restart_zimbra_proxy----"
-
-	print_v d "About to restart proxy 'zmproxyctl reload' at $NOW_DATE"
-	print_v i "About to restart proxy 'zmproxyctl reload' at $NOW_DATE" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
-
-	sudo -u zimbra -g zimbra bash<<- EOF
-		source ~/.bashrc
-		$Z_BASE_DIR/bin/zmproxyctl reload
-	EOF
-
-	#Do not have any commands between this and zmproxyctl reload above
-	# shellcheck disable=SC2181
-	if [[ $? -ne 0 ]]; then
-		print_v e "'zmproxyctl reload' command failed"
-		print_v e "'zmproxyctl reload' command failed" >> "$MESSAGE_FILE.errors"
-		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
-		exit 1
-	else
-		print_v i "'zmproxyctl reload' command success" >> "$PROGRESS_FILE"
-		_ret=0
-	fi
-}
-
-# Input:  None
-# Output: None
 # Return: 0 if all services running, non-0 otherwise
 function check_if_running() {
 	local _ret=
@@ -146,6 +115,17 @@ function check_if_running() {
 		_ret=0
 	fi
 
+	return $_ret
+}
+
+# Input:  None
+# Output: None
+# Return: 0 on success, non 0 otherwise
+# DEPRECATED: See earlier commits
+function restart_zimbra_proxy() {
+	local _ret=
+
+	_ret=1
 	return $_ret
 }
 
