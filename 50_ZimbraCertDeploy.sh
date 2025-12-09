@@ -430,7 +430,7 @@ fi
 
 if [[ -f "$X1_FILE" ]]; then
 	#compare to see if X1 Cert changed
-	if ! diff /tmp/ISRG-X1.pem $X1_FILE; then
+	if ! cmp /tmp/ISRG-X1.pem $X1_FILE; then
 		echo "WARNING: The downloaded X1 Cross Signed Cert differs from what was saved previously.
 		This might be ok if this is the first time you've run this program or if it actually changed
 		but flagging anyway." >> "$PROGRESS_FILE"
@@ -548,7 +548,7 @@ if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
 		exit 1
 	fi
 else
-	if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key) -ne 0 ]]; then
+	if ! cp $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
 		echo "   Copy of privkey.pem to commercial.key failed. stopping" >> "$MESSAGE_FILE.errors"
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 		exit 1
