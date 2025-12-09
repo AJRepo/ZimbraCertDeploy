@@ -1,10 +1,12 @@
 # ZimbraCertDeploy
 Letsencrypt Post-Renew Script customized for a Zimbra server
 
-This is designed to install a TLS certificate directly on the Zimbra mail server. It is
-good to have a valid certificate on each Zimbra mail server even if that's not the
-certificate seen by browsers (e.g. if you use HaProxy or the like between clients and
-the server).
+This program automatically installs the TLS certificate that has been downloaded by certbot.
+
+It leverages the Certbot post-deploy hooks to run automatically after certbot has renewed a
+certificate, or it can be run independently.
+
+When certbot renews certificates, it calls scripts in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
 # Requrements
 
@@ -32,7 +34,7 @@ Note: the port above is 80. It's an unused port for Zimbra, so it works well for
   * Later = 3 am local server time, restart zimbra then
   * Manual = Don't deploy, just notify that a new certificate is downloaded and ready to deploy to Zimbra.
 
-* Move the file 50\_ZimbraCertDeploy.sh to `/etc/letsencrypt/renewal-hooks/deploy/` (or optionally create a soft link from there)
+* Move (or create a link to) the file 50\_ZimbraCertDeploy.sh in `/etc/letsencrypt/renewal-hooks/deploy/`
 
 * Check that certificate renewals are scheduled. Could be found as:
    * `more /etc/cron.d/certbot`
@@ -47,7 +49,6 @@ ExecStart=
 ExecStart=/usr/bin/screen -dmS cert_renew /usr/bin/certbot -q renew
 ```
 
-When certbot renews certificates, it will call scripts in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
 # Testing:
 
@@ -72,8 +73,8 @@ when placed in `/etc/letsencrypt/renewal-hooks/deploy/`.
 
   * Zimbra runs as user zimbra, group zimbra
 
-* It makes a backup of the old certificate PEM files in /opt/zimbra/ssl/letsencrypt/bak.YYYMMDD before replacing those PEM files. Note
-that the granularity of that is to the day, not to the second.
+* It makes a backup of the old certificate PEM files in /opt/zimbra/ssl/letsencrypt/bak.YYYMMDD.HHmm before replacing those PEM files. Note
+that the granularity of that is to the minute, not to the second.
 
 
 * The command `sudo -u zimbra -g zimbra zmcontrol restart` can take a while to execute, seemingly hanging at "Stopping zimlet webapp...".
@@ -93,7 +94,7 @@ been tested/deployed.
 * Used successfully on production Zimbra versions as reported by "`zmcontrol -v`"
   * "Release 8.8.15.GA.3869.UBUNTU18.64 UBUNTU18\_64 NETWORK edition, Patch 8.8.15\_P26" ( and newer versions of the 8.8.15 line)
   * "Release 10.0.7.GA.4518.UBUNTU20\_64 NETWORK edition." (and newer versions of the 10.0.X line)
-  * e.g. "Release 10.0.11.GA.4518.UBUNTU20\_64 NETWORK edition."
+  * "Release 10.1.0.GA.4633.UBUNTU20\_64 NETWORK edition." (and newer versions of the 10.1.X line)
 
 * Notes: it has been reported that in some cases the restart at the end
  does not complete and you have to login remotely and run "zmcontrol restart"
