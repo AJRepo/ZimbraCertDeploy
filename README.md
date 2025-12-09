@@ -33,8 +33,9 @@ in `/etc/letsencrypt/renewal-hooks/deploy/` .
 
    * [Longer Explanation](https://postboxservices.com/blogs/post/lets-setup-zimbra-9-0-0-on-ubuntu-18-0-4-and-configure-letsencrypt-ssl-certificates-on-it)
 
-   * Example: 'sudo certbot certonly --standalone -d MY\_FQDN
-    --preferred-challenges=http --agree-tos --email MYEMAIL --http-01-port=80'
+   * Example:
+      * `sudo certbot certonly --standalone -d MY\_FQDN
+    --preferred-challenges=http --agree-tos --email MYEMAIL --http-01-port=80`
 
 Note: the port above is 80. Certbot uses this port which is ok because
 Port 80 is an unused port for Zimbra.
