@@ -426,7 +426,7 @@ chown zimbra:zimbra "$SSL_BACKUP_DIR"
 
 #Backup Old Cert
 print_v i "Backup Old Cert" >> "$LOG_FILE"
-if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/*.pem $SSL_BACKUP_DIR/") -ne 0 ]]; then
+if [[ $(cp $Z_BASE_DIR/ssl/letsencrypt/*.pem "$SSL_BACKUP_DIR/") -ne 0 ]]; then
 	print_v e "   Unable to backup old Certiricate, stopping" >> "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 	exit 1
@@ -449,10 +449,10 @@ fi
 X1CERTURI="https://letsencrypt.org/certs/isrgrootx1.pem.txt"
 print_v i "X1 Cert Chaining" >> "$LOG_FILE"
 if [[ $(wget -o /tmp/ISRG-X1.pem.log -O /tmp/ISRG-X1.pem $X1CERTURI) -ne 0 ]]; then
-	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$MESSAGE_FILE.errors"
-	print_v w "WARNING: Unable to download X1 Cross Signed Cert" >> "$PROGRESS_FILE"
+	print_v w "Unable to download X1 Cross Signed Cert" | tee -a "$MESSAGE_FILE.errors" "$PROGRESS_FILE"
 	echo "Subject: WARNING: Letsencrypt Renewal of Zimbra Cert
 From: <$FROM>
+To: <$EMAIL>
 
 	Unable to download X1 Cross Signed Cert" > "$MESSAGE_FILE.warning"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.warning" |& tee -a "$LOG_FILE"
