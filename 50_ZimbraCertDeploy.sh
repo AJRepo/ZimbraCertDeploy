@@ -517,7 +517,7 @@ if [[ -h $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
 		exit 1
 	fi
 else
-	if ! cp $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key ]]; then
+	if ! cp $Z_BASE_DIR/ssl/letsencrypt/privkey.pem $Z_BASE_DIR/ssl/zimbra/commercial/commercial.key; then
 		echo "   Copy of privkey.pem to commercial.key failed. stopping" >> "$MESSAGE_FILE.errors"
 		$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 		exit 1
