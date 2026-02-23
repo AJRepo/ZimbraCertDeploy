@@ -75,6 +75,7 @@ print_v d "LOG_FILE=$LOG_FILE"
 # cmd || (cmd2; exit)
 #because the exit in the () only exits the sub shell () not this script
 ###########################################
+# Note: LOG_FILE must be owned by zimbra (in /opt/zimbra/log/)
 if ! touch "$LOG_FILE"; then
 	print_v e "Error: Cannot create $LOG_FILE" | tee -a "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
@@ -86,13 +87,10 @@ if ! chown zimbra.zimbra "$LOG_FILE"; then
 	exit 1
 fi
 ######################################
+# Note: PROGRESS_FILE and MESSAGE_FILE must not be chowned on Ubuntu Systems (/tmp protected)
 if ! touch "$PROGRESS_FILE"; then
 	print_v e "Error: Cannot create $PROGRESS_FILE" | tee -a "$MESSAGE_FILE.errors"
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
-	exit 1
-fi
-if ! chown zimbra.zimbra "$PROGRESS_FILE"; then
-	print_v e "--Cannot run command 'chown zimbra.zimbra $PROGRESS_FILE'"
 	exit 1
 fi
 ######################################
@@ -115,7 +113,7 @@ function check_if_running() {
 		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
 	EOF
 
-	#If you find "Stopped" that's bad. Return 1
+	#If you find "Stopped" grep returns 0. If some are stopped then Return 1
 	# shellcheck disable=SC2181
 	if [[ $? -eq 0 ]]; then
 		print_v d "--In function check_if_running: Some Zimbra services are Stopped"
@@ -156,6 +154,7 @@ function restart_zimbra_if_not_running() {
 	#Returns 0 if all running ok. 
 	check_if_running
 	_ret=$?
+	print_v i "check_if_running returned $_ret" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 
 	#Did the grep find something "stopped" ?
 	if [[ $_ret -eq 1 ]]; then
