@@ -298,13 +298,16 @@ If a restart time was set, then this script would wait until
 and
   wait for $SECONDS_TIL_START seconds before continuing this script.
 
-If you see 'Manual' in the subject line then 
+If you see 'Manual' in the subject line then
 	You would have to complete this process by logging
 	in and running this script ($0) changing from 'Manual' to 'Now'
 
 This script (if it continues) will deploy the certbot certificate to Zimbra and restart Zimbra
 
 The file for error messages related to this process will be $MESSAGE_FILE.errors
+
+If you are using journalctl and systemd then to see logs run
+  sudo journalctl -u certbot.service -n 50
 
 If you are using systemd then the above log file will actually be in
 /tmp/systemd-private-HASH-certbot.service-ID/$MESSAGE_FILE.errors
@@ -356,6 +359,8 @@ $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.start" |& tee -a "
 # Wait for prompt and then start the backup
 #####################################
 
+echo "--ECHO STDOUT Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:"
+echo "--ECHO STDERR Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:" >$2
 print_v i "Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:"
 read -r -t "$SECONDS_TIL_START" IS_CONTINUE
 
@@ -469,6 +474,10 @@ if [[ $? -ne 0 ]]; then
 	$Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.errors" |& tee -a "$LOG_FILE"
 	exit 1
 fi
+
+#Check expiration date of certificate (will fail if run as a user without read rights)
+CERT_EXPIRE_DATE=$(openssl x509 -enddate -noout -in "$Z_BASE_DIR/ssl/letsencrypt/cert.pem")
+print_v i "New Certificatre Expiration Date=$CERT_EXPIRE_DATE" >> "$PROGRESS_FILE"
 
 #Deploy and Restart
 print_v i "Check Certs Prior to Deploy" >> "$LOG_FILE"

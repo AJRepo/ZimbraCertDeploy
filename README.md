@@ -60,17 +60,8 @@ Setup, FW,  NAT and/or Proxy apropriately to accept the port you use above
    * `cat /etc/cron.d/certbot`
    * `systemctl status certbot.timer`
 
-* (optional) Put certbot into a `screen` to watch restarts
+* (optional) Put certbot into a `screen` to watch restarts. This ONLY works in cron, not systemctl
 
-   * `systemctl edit certbot.service`
-
-      * Have that page show as
-
-```
-[Service]
-ExecStart=
-ExecStart=/usr/bin/screen -dmS cert_renew /usr/bin/certbot -q renew
-```
 
 ## Testing
 
