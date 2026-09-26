@@ -247,6 +247,7 @@ To: <$EMAIL>
 
 
 Starting Logfile $THIS_SCRIPT
+Restart Plan: $RESTART_PLAN
 Date: $NOW_DATE
 RESTART_DATE: $RESTART_DATE
 This file: $LOG_FILE
@@ -260,6 +261,7 @@ Using 'screen?': $SCREEN_STATUS">> "$LOG_FILE"
 
 SECONDS_TIL_START=$(echo "$RESTART_UNIXTIME - $NOW_UNIXTIME" | bc)
 if [[ $SECONDS_TIL_START == "" || $SECONDS_TIL_START -le 0 ]]; then
+	print_v i "Making SECONDS_TIL_START = 10" >> "$LOG_FILE"
 	SECONDS_TIL_START=10
 fi
 
@@ -362,7 +364,7 @@ $Z_BASE_DIR/common/sbin/sendmail -t "$EMAIL" < "$MESSAGE_FILE.start" |& tee -a "
 echo "--ECHO STDOUT Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:"
 echo "--ECHO STDERR Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:" >$2
 print_v i "Waiting $SECONDS_TIL_START seconds. Otherwise, press enter to continue:"
-read -r -t "$SECONDS_TIL_START" IS_CONTINUE
+read -r -p "Waiting $SECONDS_TIL_START:" -t "$SECONDS_TIL_START" IS_CONTINUE
 
 
 print_v d "Creating $PROGRESS_FILE"
