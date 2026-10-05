@@ -21,6 +21,9 @@ Z_BASE_DIR="/opt/zimbra"
 X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename "${0}")
 
+#Services to exclude in running checks
+EXCLUDE_SERVICE_CHECK="snmp"
+
 #Restart can be "Now", or "Manual" if anything else will restart at 3 am
 RESTART_PLAN="Later"
 
@@ -107,10 +110,13 @@ function check_if_running() {
 
 	print_v i "In function check_if_running----" | tee -a "$PROGRESS_FILE" "$LOG_FILE" > /dev/null
 	print_v i "--Echo PROGRESS_FILE=$PROGRESS_FILE: In check_if_running--" >> "$PROGRESS_FILE"
-	sudo -u zimbra -g zimbra bash <<- EOF
+	sudo -l -u zimbra -g zimbra bash <<- EOF
 		source ~/.bashrc
-		#Since bash 4 you can replace "2&>1 |" with |&
-		$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
+		if [[ "$EXCLUDE_SERVICE_CHECK" == "" ]] ; then
+			$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -i Stopped
+		else
+			$Z_BASE_DIR/bin/zmcontrol status |& tee -a $LOG_FILE | grep -v "$EXCLUDE_SERVICE_CHECK" | grep -i Stopped
+		fi
 	EOF
 
 	#If you find "Stopped" grep returns 0. If some are stopped then Return 1
