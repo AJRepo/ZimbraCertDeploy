@@ -22,7 +22,8 @@ X1_FILE=$Z_BASE_DIR/ssl/letsencrypt/ISRG-X1.pem
 THIS_SCRIPT=$(basename "${0}")
 
 #Services to exclude in running checks
-EXCLUDE_SERVICE_CHECK="snmp"
+#EXCLUDE_SERVICE_CHECK="snmp"
+EXCLUDE_SERVICE_CHECK=""
 
 #Restart can be "Now", or "Manual" if anything else will restart at 3 am
 RESTART_PLAN="Later"
